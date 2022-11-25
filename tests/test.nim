@@ -83,17 +83,17 @@ test "conversion from json":
 
 test "readme example":
   let
-    data = Bencode({
-      Bencode("interval"): Bencode(1800),
-      Bencode("min interval"): Bencode(900),
-      Bencode("peers"): Bencode("\x0a\x0a\x0a\x05\x00\x80"),
-      Bencode("complete"): Bencode(20),
-      Bencode("incomplete"): Bencode(0),
+    data = b({
+      b"interval": b(1800),
+      b"min interval": b(900),
+      b"peers": b("\x0a\x0a\x0a\x05\x00\x80"),
+      b"complete": b(20),
+      b"incomplete": b(0),
     })
     bencodedData = encode(data)
 
-  doAssert bencodedData == "d8:intervali1800e12:min intervali900e5:peers6:\x0a\x0a\x0a\x05\x00\x808:completei20e10:incompletei0ee"
-  doAssert decode(bencodedData) == data
+  check bencodedData == "d8:intervali1800e12:min intervali900e5:peers6:\x0a\x0a\x0a\x05\x00\x808:completei20e10:incompletei0ee"
+  check decode(bencodedData) == data
 
 test "dictionary access by string key":
   var b = Bencode({
@@ -103,3 +103,8 @@ test "dictionary access by string key":
   check b.d["interval"] == Bencode(1800)
   b.d["complete"] = Bencode(30)
   check b.d["complete"] == Bencode(30)
+
+  check b == b({
+    "interval": b(1800),
+    "complete": b(30),
+  })

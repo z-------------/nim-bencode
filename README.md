@@ -8,12 +8,12 @@ This is a Nim library to encode/decode [Bencode](https://en.wikipedia.org/wiki/B
 import bencode
 
 let
-  data = Bencode({
-    Bencode("interval"): Bencode(1800),
-    Bencode("min interval"): Bencode(900),
-    Bencode("peers"): Bencode("\x0a\x0a\x0a\x05\x00\x80"),
-    Bencode("complete"): Bencode(20),
-    Bencode("incomplete"): Bencode(0),
+  data = b({
+    b"interval": b(1800),
+    b"min interval": b(900),
+    b"peers": b("\x0a\x0a\x0a\x05\x00\x80"),
+    b"complete": b(20),
+    b"incomplete": b(0),
   })
   bencodedData = encode(data)
 

@@ -78,6 +78,24 @@ proc Bencode*(d: sink openArray[(string, BencodeObj)]): BencodeObj =
     convertedDict[Bencode(key)] = val
   Bencode(convertedDict)
 
+template b*(strVal: string): BencodeObj =
+  BencodeObj(kind: bkStr, s: strVal)
+
+template b*(intVal: int): BencodeObj =
+  BencodeObj(kind: bkInt, i: intVal)
+
+template b*(listVal: seq[BencodeObj]): BencodeObj =
+  BencodeObj(kind: bkList, l: listVal)
+
+template b*(dictVal: OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
+  BencodeObj(kind: bkDict, d: dictVal)
+
+template b*(dictVal: openArray[(BencodeObj, BencodeObj)]): BencodeObj =
+  BencodeObj(kind: bkDict, d: dictVal.toOrderedTable)
+
+template b*(dictVal: openArray[(string, BencodeObj)]): BencodeObj =
+  Bencode(dictVal)
+
 # $ #
 
 proc toString*(a: BencodeObj; f = 'u'): string
