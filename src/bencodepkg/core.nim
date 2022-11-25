@@ -55,7 +55,7 @@ proc decodeStr(s: Stream): BencodeObj =
 
   # read the string
   let str = s.readStr(length)
-  Bencode(str)
+  BencodeObj(kind: bkStr, s: str)
 
 proc decodeInt(s: Stream): BencodeObj =
   # i<ascii>e
@@ -64,23 +64,21 @@ proc decodeInt(s: Stream): BencodeObj =
   while s.peekChar() != 'e':
     iStr &= s.readChar()
   discard s.readChar()  # 'e'
-  let i = parseInt(iStr)
-  Bencode(i)
+  BencodeObj(kind: bkInt, i: parseInt(iStr))
   
 proc decodeList(s: Stream): BencodeObj =
   # l ... e
-  var l = newSeq[BencodeObj]()
+  var l: seq[BencodeObj]
   discard s.readChar()  # advance past the 'l'
   while not s.atEnd and s.peekChar() != 'e':
-    let obj = decode(s)
-    l.add(obj)
+    l.add(decode(s))
   discard s.readChar()  # 'e'
-  Bencode(l)
+  BencodeObj(kind: bkList, l: l)
 
 proc decodeDict(s: Stream): BencodeObj =
   # d ... e
   var
-    d = initOrderedTable[BencodeObj, BencodeObj]()
+    d: OrderedTable[BencodeObj, BencodeObj]
     isReadingKey = true
     curKey: BencodeObj
   discard s.readChar()  # 'd'
@@ -93,7 +91,7 @@ proc decodeDict(s: Stream): BencodeObj =
       d[curKey] = obj
       isReadingKey = true
   discard s.readChar()  # 'e'
-  Bencode(d)
+  BencodeObj(kind: bkDict, d: d)
 
 proc decode*(s: Stream): BencodeObj =
   assert not s.atEnd

@@ -10,7 +10,7 @@ type
     bkInt
     bkList
     bkDict
-  BencodeObj* = ref object
+  BencodeObj* = object
     case kind*: BencodeKind 
     of bkStr:
       s*: string 
@@ -35,9 +35,7 @@ proc hash*(obj: BencodeObj): Hash =
     !$(h)
 
 proc `==`*(a, b: BencodeObj): bool =
-  if a.isNil:
-    result = b.isNil
-  elif b.isNil or a.kind != b.kind:
+  if a.kind != b.kind:
     result = false
   else:
     case a.kind
@@ -59,22 +57,22 @@ proc `==`*(a, b: BencodeObj): bool =
 
 # constructors #
 
-proc Bencode*(s: string): BencodeObj =
+proc Bencode*(s: sink string): BencodeObj =
   BencodeObj(kind: bkStr, s: s)
   
 proc Bencode*(i: int): BencodeObj =
   BencodeObj(kind: bkInt, i: i)
   
-proc Bencode*(l: seq[BencodeObj]): BencodeObj =
+proc Bencode*(l: sink seq[BencodeObj]): BencodeObj =
   BencodeObj(kind: bkList, l: l)
   
-proc Bencode*(d: OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
+proc Bencode*(d: sink OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
   BencodeObj(kind: bkDict, d: d)
 
-proc Bencode*(d: openArray[(BencodeObj, BencodeObj)]): BencodeObj =
+proc Bencode*(d: sink openArray[(BencodeObj, BencodeObj)]): BencodeObj =
   Bencode(d.toOrderedTable)
 
-proc Bencode*(d: openArray[(string, BencodeObj)]): BencodeObj =
+proc Bencode*(d: sink openArray[(string, BencodeObj)]): BencodeObj =
   var convertedDict: OrderedTable[BencodeObj, BencodeObj]
   for key, val in d.items:
     convertedDict[Bencode(key)] = val
