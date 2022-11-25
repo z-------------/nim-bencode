@@ -108,3 +108,11 @@ proc decode*(source: string): BencodeObj =
 
 proc decode*(f: File): BencodeObj =
   decode(newFileStream(f))
+
+# helpers #
+
+func `[]`*(d: OrderedTable[BencodeObj, BencodeObj]; key: string): BencodeObj =
+  d[Bencode(key)]
+
+func `[]=`*(d: var OrderedTable[BencodeObj, BencodeObj]; key: string; value: BencodeObj) =
+  d[Bencode(key)] = value

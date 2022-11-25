@@ -74,6 +74,12 @@ proc Bencode*(d: OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
 proc Bencode*(d: openArray[(BencodeObj, BencodeObj)]): BencodeObj =
   Bencode(d.toOrderedTable)
 
+proc Bencode*(d: openArray[(string, BencodeObj)]): BencodeObj =
+  var convertedDict: OrderedTable[BencodeObj, BencodeObj]
+  for key, val in d.items:
+    convertedDict[Bencode(key)] = val
+  Bencode(convertedDict)
+
 # $ #
 
 proc toString*(a: BencodeObj; f = 'u'): string

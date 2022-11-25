@@ -94,3 +94,12 @@ test "readme example":
 
   doAssert bencodedData == "d8:intervali1800e12:min intervali900e5:peers6:\x0a\x0a\x0a\x05\x00\x808:completei20e10:incompletei0ee"
   doAssert decode(bencodedData) == data
+
+test "dictionary access by string key":
+  var b = Bencode({
+    "interval": Bencode(1800),
+    "complete": Bencode(20),
+  })
+  check b.d["interval"] == Bencode(1800)
+  b.d["complete"] = Bencode(30)
+  check b.d["complete"] == Bencode(30)
