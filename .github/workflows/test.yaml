@@ -1,0 +1,22 @@
+name: Test
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nimVersion: ["1.4.2", "stable"]
+        nimGc: ["arc", "orc", "refc"]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - uses: jiro4989/setup-nim-action@v1
+        with:
+          nim-version: ${{ matrix.nimVersion }}
+      - run: nimble test -Y --gc:${{ matrix.nimGc }}
