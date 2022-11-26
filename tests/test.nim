@@ -1,7 +1,9 @@
-import unittest
 import bencode
-import tables
-import json
+import std/unittest
+import std/[
+  json,
+  tables,
+]
 
 test "basic encode/decode":
   let
@@ -124,3 +126,8 @@ test "execution terminates for invalid bencode input":
 test "string too short":
   const data = "10:hello"
   check decode(data) == b"hello"
+
+test "unexpected end of input":
+  check decode("l").l == newSeq[BencodeObj]()
+  check decode("d").d == initOrderedTable[BencodeObj, BencodeObj]()
+  check decode("d5:hello5:world3:foo").d == { b"hello": b"world" }.toOrderedTable
