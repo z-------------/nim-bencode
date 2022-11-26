@@ -120,3 +120,7 @@ test "execution terminates for invalid bencode input":
       discard decode(invalidData)
     except ValueError:
       discard
+
+test "string too short":
+  const data = "10:hello"
+  check decode(data) == b"hello"
