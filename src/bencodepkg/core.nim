@@ -56,7 +56,11 @@ proc decodeStr(s: Stream): BencodeObj =
   let length = parseInt(lengthStr)
 
   # read the string
-  let str = s.readStr(length)
+  let str =
+    if length >= 0:
+      s.readStr(length)
+    else:
+      ""
   BencodeObj(kind: bkStr, s: str)
 
 proc decodeInt(s: Stream): BencodeObj =

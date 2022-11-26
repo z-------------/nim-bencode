@@ -127,6 +127,10 @@ test "string too short":
   const data = "10:hello"
   check decode(data) == b"hello"
 
+test "invalid string length":
+  const data = "-5:hello"
+  check decode(data) == b""
+
 test "unexpected end of input":
   check decode("l").l == newSeq[BencodeObj]()
   check decode("d").d == initOrderedTable[BencodeObj, BencodeObj]()
