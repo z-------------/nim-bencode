@@ -83,12 +83,11 @@ proc decodeDict(s: Stream): BencodeObj =
     curKey: BencodeObj
   discard s.readChar()  # 'd'
   while not s.atEnd and s.peekChar() != 'e':
-    let obj = decode(s)
     if isReadingKey:
-      curKey = obj
+      curKey = decode(s)
       isReadingKey = false
     else:
-      d[curKey] = obj
+      d[curKey] = decode(s)
       isReadingKey = true
   discard s.readChar()  # 'e'
   BencodeObj(kind: bkDict, d: d)
@@ -112,5 +111,5 @@ proc decode*(f: File): BencodeObj =
 func `[]`*(d: OrderedTable[BencodeObj, BencodeObj]; key: string): BencodeObj =
   d[Bencode(key)]
 
-func `[]=`*(d: var OrderedTable[BencodeObj, BencodeObj]; key: string; value: BencodeObj) =
+func `[]=`*(d: var OrderedTable[BencodeObj, BencodeObj]; key: string; value: sink BencodeObj) =
   d[Bencode(key)] = value
