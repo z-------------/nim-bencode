@@ -1,7 +1,9 @@
-import std/json
-import tables
-import sugar
-import sequtils
+import std/[
+  json,
+  sequtils,
+  sugar,
+  tables,
+]
 import ./core
 
 proc asJFieldName(obj: BencodeObj): string =

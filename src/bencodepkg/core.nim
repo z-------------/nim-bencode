@@ -1,6 +1,8 @@
-import tables
-import strutils
-import streams
+import std/[
+  streams,
+  strutils,
+  tables,
+]
 import ./types
 
 export types
@@ -14,7 +16,7 @@ proc encodeStr(s: string): string =
 
 proc encodeInt(i: int): string =
   'i' & $i & 'e'
-  
+
 proc encodeList(l: seq[BencodeObj]): string =
   result = "l"
   for el in l:
@@ -65,7 +67,7 @@ proc decodeInt(s: Stream): BencodeObj =
     iStr &= s.readChar()
   discard s.readChar()  # 'e'
   BencodeObj(kind: bkInt, i: parseInt(iStr))
-  
+
 proc decodeList(s: Stream): BencodeObj =
   # l ... e
   var l: seq[BencodeObj]

@@ -1,19 +1,21 @@
-import tables
-import hashes
-import sequtils
-import strutils
-import sugar
+import std/[
+  hashes,
+  sequtils,
+  strutils,
+  sugar,
+  tables,
+]
 
-type 
+type
   BencodeKind* = enum
     bkStr
     bkInt
     bkList
     bkDict
   BencodeObj* = object
-    case kind*: BencodeKind 
+    case kind*: BencodeKind
     of bkStr:
-      s*: string 
+      s*: string
     of bkInt:
       i*: int
     of bkList:
@@ -23,12 +25,12 @@ type
 
 # equality #
 
-proc hash*(obj: BencodeObj): Hash = 
+proc hash*(obj: BencodeObj): Hash =
   case obj.kind
   of bkStr: !$(hash(obj.s))
   of bkInt: !$(hash(obj.i))
   of bkList: !$(hash(obj.l))
-  of bkDict: 
+  of bkDict:
     var h: Hash
     for k, v in obj.d.pairs:
       h = hash(k) !& hash(v)
@@ -59,13 +61,13 @@ proc `==`*(a, b: BencodeObj): bool =
 
 proc Bencode*(s: sink string): BencodeObj =
   BencodeObj(kind: bkStr, s: s)
-  
+
 proc Bencode*(i: int): BencodeObj =
   BencodeObj(kind: bkInt, i: i)
-  
+
 proc Bencode*(l: sink seq[BencodeObj]): BencodeObj =
   BencodeObj(kind: bkList, l: l)
-  
+
 proc Bencode*(d: sink OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
   BencodeObj(kind: bkDict, d: d)
 
@@ -119,5 +121,5 @@ proc toString*(a: BencodeObj; f = 'u'): string =
   of bkList: a.l.toString(f)
   of bkDict: a.d.toString(f)
 
-proc `$`*(a: BencodeObj): string = 
+proc `$`*(a: BencodeObj): string =
   a.toString('u')
