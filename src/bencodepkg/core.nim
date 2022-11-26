@@ -1,8 +1,8 @@
 import std/[
-  streams,
   strutils,
   tables,
 ]
+import pkg/faststreams/inputs
 import ./types
 
 export types
@@ -44,73 +44,80 @@ proc bEncode*(obj: BencodeObj): string =
 
 # decode #
 
-proc bDecode*(s: Stream): BencodeObj
+template tryAdvance(s: InputStream) =
+  if s.readable:
+    s.advance
 
-proc decodeStr(s: Stream): BencodeObj =
+proc readStrInto(s: InputStream; outStr: var string; len: int) =
+  let bytesRead = s.readIntoEx(outStr.toOpenArrayByte(0, len - 1))
+  outStr.setLen(bytesRead)
+
+proc bDecode*(s: InputStream): BencodeObj
+
+proc decodeStr(s: InputStream): BencodeObj =
   # <length>:<contents>
   # get the length
   var lengthStr = ""
-  while not s.atEnd and s.peekChar() != ':':
-    lengthStr &= s.readChar()
-  discard s.readChar()  # advance past the ':'
+  while s.readable and s.peek.char != ':':
+    lengthStr &= s.read.char
+  s.tryAdvance # advance past the ':'
   let length = parseInt(lengthStr)
 
   # read the string
-  let str =
-    if length >= 0:
-      s.readStr(length)
-    else:
-      ""
-  BencodeObj(kind: bkStr, s: str)
+  if length > 0:
+    result = BencodeObj(kind: bkStr, s: newString(length))
+    s.readStrInto(result.s, length)
+  else:
+    result = BencodeObj(kind: bkStr, s: "")
 
-proc decodeInt(s: Stream): BencodeObj =
+proc decodeInt(s: InputStream): BencodeObj =
   # i<ascii>e
   var iStr = ""
-  discard s.readChar()  # 'i'
-  while not s.atEnd and s.peekChar() != 'e':
-    iStr &= s.readChar()
-  discard s.readChar()  # 'e'
+  s.tryAdvance # 'i'
+  while s.readable and s.peek.char != 'e':
+    iStr &= s.read.char
+  s.tryAdvance # 'e'
   BencodeObj(kind: bkInt, i: parseInt(iStr))
 
-proc decodeList(s: Stream): BencodeObj =
+proc decodeList(s: InputStream): BencodeObj =
   # l ... e
   var l: seq[BencodeObj]
-  discard s.readChar()  # advance past the 'l'
-  while not s.atEnd and s.peekChar() != 'e':
+  s.tryAdvance # advance past the 'l'
+  while s.readable and s.peek.char != 'e':
     l.add(bDecode(s))
-  discard s.readChar()  # 'e'
+  s.tryAdvance # 'e'
   BencodeObj(kind: bkList, l: l)
 
-proc decodeDict(s: Stream): BencodeObj =
+proc decodeDict(s: InputStream): BencodeObj =
   # d ... e
   var
     d: OrderedTable[BencodeObj, BencodeObj]
     isReadingKey = true
     curKey: BencodeObj
-  discard s.readChar()  # 'd'
-  while not s.atEnd and s.peekChar() != 'e':
+  s.tryAdvance # 'd'
+  while s.readable and s.peek.char != 'e':
     if isReadingKey:
       curKey = bDecode(s)
       isReadingKey = false
     else:
       d[curKey] = bDecode(s)
       isReadingKey = true
-  discard s.readChar()  # 'e'
+  s.tryAdvance # 'e'
   BencodeObj(kind: bkDict, d: d)
 
-proc bDecode*(s: Stream): BencodeObj =
-  assert not s.atEnd
-  result = case s.peekChar()
+proc bDecode*(s: InputStream): BencodeObj =
+  assert s.readable
+  result = case s.peek.char
     of 'i': decodeInt(s)
     of 'l': decodeList(s)
     of 'd': decodeDict(s)
     else: decodeStr(s)
 
 proc bDecode*(source: string): BencodeObj =
-  bDecode(newStringStream(source))
+  bDecode(unsafeMemoryInput(source))
 
 proc bDecode*(f: File): BencodeObj =
-  bDecode(newFileStream(f))
+  bDecode(fileInput(f))
 
 # helpers #
 

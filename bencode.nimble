@@ -11,3 +11,4 @@ installExt    = @["nim"]
 # Dependencies
 
 requires "nim >= 1.4.2"
+requires "faststreams >= 0.3.0"
