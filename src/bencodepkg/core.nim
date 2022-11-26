@@ -50,7 +50,7 @@ proc decodeStr(s: Stream): BencodeObj =
   # <length>:<contents>
   # get the length
   var lengthStr = ""
-  while s.peekChar() != ':':
+  while not s.atEnd and s.peekChar() != ':':
     lengthStr &= s.readChar()
   discard s.readChar()  # advance past the ':'
   let length = parseInt(lengthStr)
@@ -63,7 +63,7 @@ proc decodeInt(s: Stream): BencodeObj =
   # i<ascii>e
   var iStr = ""
   discard s.readChar()  # 'i'
-  while s.peekChar() != 'e':
+  while not s.atEnd and s.peekChar() != 'e':
     iStr &= s.readChar()
   discard s.readChar()  # 'e'
   BencodeObj(kind: bkInt, i: parseInt(iStr))

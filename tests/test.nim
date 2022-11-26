@@ -108,3 +108,15 @@ test "dictionary access by string key":
     "interval": b(1800),
     "complete": b(30),
   })
+
+test "execution terminates for invalid bencode input":
+  const data = "d4:name4:dmdm4:lang3:nim3:agei50e5:alistli1e2:hiee"
+  for i in 0 .. data.high:
+    if i in {0, 30, 31, 35..40}:
+      # input is valid even if we remove these indexes
+      continue
+    let invalidData = data[0 .. i - 1] & data[i + 1 .. ^1]
+    try:
+      discard decode(invalidData)
+    except ValueError:
+      discard
