@@ -1,5 +1,6 @@
 import std/[
   hashes,
+  macros,
   sequtils,
   strutils,
   sugar,
@@ -68,6 +69,9 @@ proc Bencode*(i: int): BencodeObj =
 proc Bencode*(l: sink seq[BencodeObj]): BencodeObj =
   BencodeObj(kind: bkList, l: l)
 
+proc Bencode*(l: sink openArray[BencodeObj]): BencodeObj =
+  BencodeObj(kind: bkList, l: l.toSeq)
+
 proc Bencode*(d: sink OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
   BencodeObj(kind: bkDict, d: d)
 
@@ -79,6 +83,38 @@ proc Bencode*(d: sink openArray[(string, BencodeObj)]): BencodeObj =
   for key, val in d.items:
     convertedDict[Bencode(key)] = val
   Bencode(convertedDict)
+
+func toBencodeImpl(value: NimNode): NimNode =
+  # Adapted from std/json's `%*`: https://github.com/nim-lang/Nim/blob/0b44840299c15faa3b74cb82f48dcd56023f7d35/lib/pure/json.nim#L411
+  case value.kind
+  of nnkBracket: # array
+    if value.len == 0:
+      result = quote: BencodeObj(kind: bkList)
+    else:
+      var bracketNode = nnkBracket.newNimNode()
+      for i in 0 ..< value.len:
+        bracketNode.add(toBencodeImpl(value[i]))
+      result = newCall(bindSym("Bencode", brOpen), bracketNode)
+  of nnkTableConstr: # object
+    if value.len == 0:
+      result = quote: BencodeObj(kind: bkDict)
+    else:
+      var tableNode = nnkTableConstr.newNimNode()
+      for i in 0 ..< value.len:
+        value[i].expectKind nnkExprColonExpr
+        tableNode.add nnkExprColonExpr.newTree(toBencodeImpl(value[i][0]), toBencodeImpl(value[i][1]))
+      result = newCall(bindSym("Bencode", brOpen), tableNode)
+  of nnkPar:
+    if value.len == 1:
+      result = toBencodeImpl(value[0])
+    else:
+      # what is this?
+      result = newCall(bindSym("Bencode", brOpen), value)
+  else:
+    result = newCall(bindSym("Bencode", brOpen), value)
+
+macro toBencode*(value: untyped): untyped =
+  toBencodeImpl(value)
 
 # $ #
 

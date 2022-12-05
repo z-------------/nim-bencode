@@ -130,3 +130,41 @@ test "unexpected end of input":
   check bDecode("l").l == newSeq[BencodeObj]()
   check bDecode("d").d == initOrderedTable[BencodeObj, BencodeObj]()
   check bDecode("d5:hello5:world3:foo").d == { Bencode("hello"): Bencode("world") }.toOrderedTable
+
+test "toBencode":
+  let world = "world"
+
+  func getValue(): int =
+    314159
+
+  let actual = toBencode({
+    "foo": [1, 2, 3],
+    "bar": {
+      "nested": getValue(),
+      "nested2": [
+        {
+          "bar": "hello " & world,
+        },
+      ],
+    },
+    "paren": (3 + 4),
+    42: "non-string key",
+    "empty list": [],
+    "empty dict": {:},
+  })
+  let expected = Bencode({
+    Bencode("foo"): Bencode([Bencode(1), Bencode(2), Bencode(3)]),
+    Bencode("bar"): Bencode({
+      Bencode("nested"): Bencode(314159),
+      Bencode("nested2"): Bencode([
+        Bencode({
+          Bencode("bar"): Bencode("hello world"),
+        })
+      ]),
+    }),
+    Bencode("paren"): Bencode(7),
+    Bencode(42): Bencode("non-string key"),
+    Bencode("empty list"): BencodeObj(kind: bkList),
+    Bencode("empty dict"): BencodeObj(kind: bkDict),
+  })
+  check actual == expected
