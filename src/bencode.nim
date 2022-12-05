@@ -8,7 +8,7 @@ when isMainModule:
   proc die(msg: string; code = 1) {.noReturn.} =
     stderr.writeLine(msg)
     quit(code)
-  
+
   proc parseFormatArg(arg: string): char =
     if arg.len < 2: die("Invalid argument.")
     let c = arg[1]
@@ -28,5 +28,5 @@ when isMainModule:
   
   let
     f = open(filename, fmRead)
-    obj = decode(f)
+    obj = bDecode(f)
   echo obj.toString(format)

@@ -9,7 +9,7 @@ export types
 
 # encode #
 
-proc encode*(obj: BencodeObj): string
+proc bEncode*(obj: BencodeObj): string
 
 proc encodeStr(s: string): string =
   $s.len & ':' & s
@@ -20,18 +20,18 @@ proc encodeInt(i: int): string =
 proc encodeList(l: seq[BencodeObj]): string =
   result = "l"
   for el in l:
-    result &= encode(el)
+    result &= bEncode(el)
   result &= "e"
 
 proc encodeDict(d: OrderedTable[BencodeObj, BencodeObj]): string =
   result = "d"
   for k, v in d.pairs():
     assert k.kind == bkStr
-    result &= encode(k) & encode(v)
+    result &= bEncode(k) & bEncode(v)
 
   result &= "e"
 
-proc encode*(obj: BencodeObj): string =
+proc bEncode*(obj: BencodeObj): string =
   result = case obj.kind
     of bkStr:
       encodeStr(obj.s)
@@ -44,7 +44,7 @@ proc encode*(obj: BencodeObj): string =
 
 # decode #
 
-proc decode*(s: Stream): BencodeObj
+proc bDecode*(s: Stream): BencodeObj
 
 proc decodeStr(s: Stream): BencodeObj =
   # <length>:<contents>
@@ -77,7 +77,7 @@ proc decodeList(s: Stream): BencodeObj =
   var l: seq[BencodeObj]
   discard s.readChar()  # advance past the 'l'
   while not s.atEnd and s.peekChar() != 'e':
-    l.add(decode(s))
+    l.add(bDecode(s))
   discard s.readChar()  # 'e'
   BencodeObj(kind: bkList, l: l)
 
@@ -90,15 +90,15 @@ proc decodeDict(s: Stream): BencodeObj =
   discard s.readChar()  # 'd'
   while not s.atEnd and s.peekChar() != 'e':
     if isReadingKey:
-      curKey = decode(s)
+      curKey = bDecode(s)
       isReadingKey = false
     else:
-      d[curKey] = decode(s)
+      d[curKey] = bDecode(s)
       isReadingKey = true
   discard s.readChar()  # 'e'
   BencodeObj(kind: bkDict, d: d)
 
-proc decode*(s: Stream): BencodeObj =
+proc bDecode*(s: Stream): BencodeObj =
   assert not s.atEnd
   result = case s.peekChar()
     of 'i': decodeInt(s)
@@ -106,11 +106,11 @@ proc decode*(s: Stream): BencodeObj =
     of 'd': decodeDict(s)
     else: decodeStr(s)
 
-proc decode*(source: string): BencodeObj =
-  decode(newStringStream(source))
+proc bDecode*(source: string): BencodeObj =
+  bDecode(newStringStream(source))
 
-proc decode*(f: File): BencodeObj =
-  decode(newFileStream(f))
+proc bDecode*(f: File): BencodeObj =
+  bDecode(newFileStream(f))
 
 # helpers #
 

@@ -26,8 +26,8 @@ test "basic encode/decode":
       }.toOrderedTable
 
   for k, v in testPairs.pairs:
-    check bencode.encode(k) == v
-    check bencode.decode(v) == k
+    check bEncode(k) == v
+    check bDecode(v) == k
 
 test "conversion to json":
   let
@@ -92,10 +92,10 @@ test "readme example":
       Bencode("complete"): Bencode(20),
       Bencode("incomplete"): Bencode(0),
     })
-    bencodedData = encode(data)
+    bencodedData = bEncode(data)
 
   check bencodedData == "d8:intervali1800e12:min intervali900e5:peers6:\x0a\x0a\x0a\x05\x00\x808:completei20e10:incompletei0ee"
-  check decode(bencodedData) == data
+  check bDecode(bencodedData) == data
 
 test "dictionary access by string key":
   var b = Bencode({
@@ -114,19 +114,19 @@ test "execution terminates for invalid bencode input":
       continue
     let invalidData = data[0 .. i - 1] & data[i + 1 .. ^1]
     try:
-      discard decode(invalidData)
+      discard bDecode(invalidData)
     except ValueError:
       discard
 
 test "string too short":
   const data = "10:hello"
-  check decode(data) == Bencode("hello")
+  check bDecode(data) == Bencode("hello")
 
 test "invalid string length":
   const data = "-5:hello"
-  check decode(data) == Bencode("")
+  check bDecode(data) == Bencode("")
 
 test "unexpected end of input":
-  check decode("l").l == newSeq[BencodeObj]()
-  check decode("d").d == initOrderedTable[BencodeObj, BencodeObj]()
-  check decode("d5:hello5:world3:foo").d == { Bencode("hello"): Bencode("world") }.toOrderedTable
+  check bDecode("l").l == newSeq[BencodeObj]()
+  check bDecode("d").d == initOrderedTable[BencodeObj, BencodeObj]()
+  check bDecode("d5:hello5:world3:foo").d == { Bencode("hello"): Bencode("world") }.toOrderedTable
