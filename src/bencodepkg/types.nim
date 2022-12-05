@@ -89,29 +89,29 @@ func toBencodeImpl(value: NimNode): NimNode =
   case value.kind
   of nnkBracket: # array
     if value.len == 0:
-      result = quote: BencodeObj(kind: bkList)
+      quote: BencodeObj(kind: bkList)
     else:
       var bracketNode = nnkBracket.newNimNode()
       for i in 0 ..< value.len:
         bracketNode.add(toBencodeImpl(value[i]))
-      result = newCall(bindSym("Bencode", brOpen), bracketNode)
+      newCall(bindSym("Bencode", brOpen), bracketNode)
   of nnkTableConstr: # object
     if value.len == 0:
-      result = quote: BencodeObj(kind: bkDict)
+      quote: BencodeObj(kind: bkDict)
     else:
       var tableNode = nnkTableConstr.newNimNode()
       for i in 0 ..< value.len:
         value[i].expectKind nnkExprColonExpr
         tableNode.add nnkExprColonExpr.newTree(toBencodeImpl(value[i][0]), toBencodeImpl(value[i][1]))
-      result = newCall(bindSym("Bencode", brOpen), tableNode)
+      newCall(bindSym("Bencode", brOpen), tableNode)
   of nnkPar:
     if value.len == 1:
-      result = toBencodeImpl(value[0])
+      toBencodeImpl(value[0])
     else:
       # what is this?
-      result = newCall(bindSym("Bencode", brOpen), value)
+      newCall(bindSym("Bencode", brOpen), value)
   else:
-    result = newCall(bindSym("Bencode", brOpen), value)
+    newCall(bindSym("Bencode", brOpen), value)
 
 macro toBencode*(value: untyped): untyped =
   toBencodeImpl(value)
