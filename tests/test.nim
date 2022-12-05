@@ -85,12 +85,12 @@ test "conversion from json":
 
 test "readme example":
   let
-    data = b({
-      b"interval": b(1800),
-      b"min interval": b(900),
-      b"peers": b("\x0a\x0a\x0a\x05\x00\x80"),
-      b"complete": b(20),
-      b"incomplete": b(0),
+    data = Bencode({
+      Bencode("interval"): Bencode(1800),
+      Bencode("min interval"): Bencode(900),
+      Bencode("peers"): Bencode("\x0a\x0a\x0a\x05\x00\x80"),
+      Bencode("complete"): Bencode(20),
+      Bencode("incomplete"): Bencode(0),
     })
     bencodedData = encode(data)
 
@@ -106,11 +106,6 @@ test "dictionary access by string key":
   b.d["complete"] = Bencode(30)
   check b.d["complete"] == Bencode(30)
 
-  check b == b({
-    "interval": b(1800),
-    "complete": b(30),
-  })
-
 test "execution terminates for invalid bencode input":
   const data = "d4:name4:dmdm4:lang3:nim3:agei50e5:alistli1e2:hiee"
   for i in 0 .. data.high:
@@ -125,13 +120,13 @@ test "execution terminates for invalid bencode input":
 
 test "string too short":
   const data = "10:hello"
-  check decode(data) == b"hello"
+  check decode(data) == Bencode("hello")
 
 test "invalid string length":
   const data = "-5:hello"
-  check decode(data) == b""
+  check decode(data) == Bencode("")
 
 test "unexpected end of input":
   check decode("l").l == newSeq[BencodeObj]()
   check decode("d").d == initOrderedTable[BencodeObj, BencodeObj]()
-  check decode("d5:hello5:world3:foo").d == { b"hello": b"world" }.toOrderedTable
+  check decode("d5:hello5:world3:foo").d == { Bencode("hello"): Bencode("world") }.toOrderedTable
