@@ -116,6 +116,24 @@ func toBencodeImpl(value: NimNode): NimNode =
 macro toBencode*(value: untyped): untyped =
   toBencodeImpl(value)
 
+template be*(strVal: string): BencodeObj =
+  BencodeObj(kind: bkStr, s: strVal)
+
+template be*(intVal: int): BencodeObj =
+  BencodeObj(kind: bkInt, i: intVal)
+
+template be*(listVal: seq[BencodeObj]): BencodeObj =
+  BencodeObj(kind: bkList, l: listVal)
+
+template be*(dictVal: OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
+  BencodeObj(kind: bkDict, d: dictVal)
+
+template be*(dictVal: openArray[(BencodeObj, BencodeObj)]): BencodeObj =
+  BencodeObj(kind: bkDict, d: dictVal.toOrderedTable)
+
+template be*(dictVal: openArray[(string, BencodeObj)]): BencodeObj =
+  Bencode(dictVal)
+
 # $ #
 
 proc toString*(a: BencodeObj; f = 'u'): string

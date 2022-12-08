@@ -85,12 +85,12 @@ test "conversion from json":
 
 test "readme example":
   let
-    data = Bencode({
-      Bencode("interval"): Bencode(1800),
-      Bencode("min interval"): Bencode(900),
-      Bencode("peers"): Bencode("\x0a\x0a\x0a\x05\x00\x80"),
-      Bencode("complete"): Bencode(20),
-      Bencode("incomplete"): Bencode(0),
+    data = be({
+      be("interval"): be(1800),
+      be("min interval"): be(900),
+      be("peers"): be("\x0a\x0a\x0a\x05\x00\x80"),
+      be("complete"): be(20),
+      be("incomplete"): be(0),
     })
     bencodedData = bEncode(data)
 
@@ -105,6 +105,11 @@ test "dictionary access by string key":
   check b.d["interval"] == Bencode(1800)
   b.d["complete"] = Bencode(30)
   check b.d["complete"] == Bencode(30)
+
+  check b == be({
+    "interval": be(1800),
+    "complete": be(30),
+  })
 
 test "execution terminates for invalid bencode input":
   const data = "d4:name4:dmdm4:lang3:nim3:agei50e5:alistli1e2:hiee"
