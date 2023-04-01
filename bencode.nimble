@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.0.5"
+version       = "0.0.6"
 author        = "z-------------"
 description   = "Bencode for Nim"
 license       = "MIT"
