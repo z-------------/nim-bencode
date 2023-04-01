@@ -24,9 +24,35 @@ type
     of bkDict:
       d*: OrderedTable[BencodeObj, BencodeObj]
 
+# $ #
+
+func toString*(a: BencodeObj; f = 'u'): string
+
+func toString(str: string; f = 'u'): string =
+  case f
+  of 'x': str.map(c => "\\x" & ord(c).toHex(2)).join("")
+  of 'd': str.map(c => "\\d" & ord(c).`$`.align(4, '0')).join("")
+  else: str
+
+func toString(l: seq[BencodeObj]; f = 'u'): string =
+  "@[" & l.map(obj => obj.toString(f)).join(", ") & "]"
+
+func toString(d: OrderedTable[BencodeObj, BencodeObj]; f = 'u'): string =
+  "{ " & collect(newSeq, for k, v in d.pairs: k.toString(f) & ": " & v.toString(f)).join(", ") & " }"
+
+func toString*(a: BencodeObj; f = 'u'): string =
+  case a.kind
+  of bkStr: '"' & a.s.toString(f) & '"'
+  of bkInt: $a.i
+  of bkList: a.l.toString(f)
+  of bkDict: a.d.toString(f)
+
+func `$`*(a: BencodeObj): string =
+  a.toString('u')
+
 # equality #
 
-proc hash*(obj: BencodeObj): Hash =
+func hash*(obj: BencodeObj): Hash =
   case obj.kind
   of bkStr: !$(hash(obj.s))
   of bkInt: !$(hash(obj.i))
@@ -37,7 +63,7 @@ proc hash*(obj: BencodeObj): Hash =
       h = hash(k) !& hash(v)
     !$(h)
 
-proc `==`*(a, b: BencodeObj): bool =
+func `==`*(a, b: BencodeObj): bool =
   if a.kind != b.kind:
     result = false
   else:
@@ -134,28 +160,3 @@ template be*(dictVal: openArray[(BencodeObj, BencodeObj)]): BencodeObj =
 template be*(dictVal: openArray[(string, BencodeObj)]): BencodeObj =
   Bencode(dictVal)
 
-# $ #
-
-proc toString*(a: BencodeObj; f = 'u'): string
-
-proc toString(str: string; f = 'u'): string =
-  case f
-  of 'x': str.map(c => "\\x" & ord(c).toHex(2)).join("")
-  of 'd': str.map(c => "\\d" & ord(c).`$`.align(4, '0')).join("")
-  else: str
-
-proc toString(l: seq[BencodeObj]; f = 'u'): string =
-  "@[" & l.map(obj => obj.toString(f)).join(", ") & "]"
-
-proc toString(d: OrderedTable[BencodeObj, BencodeObj]; f = 'u'): string =
-  "{ " & collect(newSeq, for k, v in d.pairs: k.toString(f) & ": " & v.toString(f)).join(", ") & " }"
-
-proc toString*(a: BencodeObj; f = 'u'): string =
-  case a.kind
-  of bkStr: '"' & a.s.toString(f) & '"'
-  of bkInt: $a.i
-  of bkList: a.l.toString(f)
-  of bkDict: a.d.toString(f)
-
-proc `$`*(a: BencodeObj): string =
-  a.toString('u')
