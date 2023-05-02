@@ -155,6 +155,7 @@ template be*(dictVal: OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
   BencodeObj(kind: bkDict, d: dictVal)
 
 template be*(dictVal: openArray[(BencodeObj, BencodeObj)]): BencodeObj =
+  mixin toOrderedTable
   BencodeObj(kind: bkDict, d: dictVal.toOrderedTable)
 
 template be*(dictVal: openArray[(string, BencodeObj)]): BencodeObj =
