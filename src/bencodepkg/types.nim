@@ -9,10 +9,10 @@ import std/[
 
 type
   BencodeKind* = enum
-    bkStr
-    bkInt
-    bkList
-    bkDict
+    bkStr = "string"
+    bkInt = "integer"
+    bkList = "list"
+    bkDict = "dictionary"
   BencodeObj* = object
     case kind*: BencodeKind
     of bkStr:
@@ -22,7 +22,7 @@ type
     of bkList:
       l*: seq[BencodeObj]
     of bkDict:
-      d*: OrderedTable[BencodeObj, BencodeObj]
+      d*: OrderedTable[string, BencodeObj]
 
 # $ #
 
@@ -37,7 +37,7 @@ func toString(str: string; f = 'u'): string =
 func toString(l: seq[BencodeObj]; f = 'u'): string =
   "@[" & l.map(obj => obj.toString(f)).join(", ") & "]"
 
-func toString(d: OrderedTable[BencodeObj, BencodeObj]; f = 'u'): string =
+func toString(d: OrderedTable[string, BencodeObj]; f = 'u'): string =
   "{ " & collect(newSeq, for k, v in d.pairs: k.toString(f) & ": " & v.toString(f)).join(", ") & " }"
 
 func toString*(a: BencodeObj; f = 'u'): string =
@@ -98,17 +98,11 @@ proc Bencode*(l: sink seq[BencodeObj]): BencodeObj =
 proc Bencode*(l: sink openArray[BencodeObj]): BencodeObj =
   BencodeObj(kind: bkList, l: l.toSeq)
 
-proc Bencode*(d: sink OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
+proc Bencode*(d: sink OrderedTable[string, BencodeObj]): BencodeObj =
   BencodeObj(kind: bkDict, d: d)
 
-proc Bencode*(d: sink openArray[(BencodeObj, BencodeObj)]): BencodeObj =
-  Bencode(d.toOrderedTable)
-
 proc Bencode*(d: sink openArray[(string, BencodeObj)]): BencodeObj =
-  var convertedDict: OrderedTable[BencodeObj, BencodeObj]
-  for key, val in d.items:
-    convertedDict[Bencode(key)] = val
-  Bencode(convertedDict)
+  Bencode(d.toOrderedTable)
 
 func toBencodeImpl(value: NimNode): NimNode =
   # Adapted from std/json's `%*`: https://github.com/nim-lang/Nim/blob/0b44840299c15faa3b74cb82f48dcd56023f7d35/lib/pure/json.nim#L411
@@ -128,7 +122,7 @@ func toBencodeImpl(value: NimNode): NimNode =
       var tableNode = nnkTableConstr.newNimNode()
       for i in 0 ..< value.len:
         value[i].expectKind nnkExprColonExpr
-        tableNode.add nnkExprColonExpr.newTree(toBencodeImpl(value[i][0]), toBencodeImpl(value[i][1]))
+        tableNode.add nnkExprColonExpr.newTree(value[i][0], toBencodeImpl(value[i][1]))
       newCall(bindSym("Bencode", brOpen), tableNode)
   of nnkPar:
     if value.len == 1:
@@ -151,13 +145,9 @@ template be*(intVal: int): BencodeObj =
 template be*(listVal: seq[BencodeObj]): BencodeObj =
   BencodeObj(kind: bkList, l: listVal)
 
-template be*(dictVal: OrderedTable[BencodeObj, BencodeObj]): BencodeObj =
+template be*(dictVal: OrderedTable[string, BencodeObj]): BencodeObj =
   BencodeObj(kind: bkDict, d: dictVal)
 
-template be*(dictVal: openArray[(BencodeObj, BencodeObj)]): BencodeObj =
+template be*(dictVal: openArray[(string, BencodeObj)]): BencodeObj =
   mixin toOrderedTable
   BencodeObj(kind: bkDict, d: dictVal.toOrderedTable)
-
-template be*(dictVal: openArray[(string, BencodeObj)]): BencodeObj =
-  Bencode(dictVal)
-

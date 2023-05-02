@@ -23,11 +23,10 @@ proc encodeList(l: seq[BencodeObj]): string =
     result &= bEncode(el)
   result &= "e"
 
-proc encodeDict(d: OrderedTable[BencodeObj, BencodeObj]): string =
+proc encodeDict(d: OrderedTable[string, BencodeObj]): string =
   result = "d"
   for k, v in d.pairs():
-    assert k.kind == bkStr
-    result &= bEncode(k) & bEncode(v)
+    result &= encodeStr(k) & bEncode(v)
 
   result &= "e"
 
@@ -84,13 +83,16 @@ proc decodeList(s: Stream): BencodeObj =
 proc decodeDict(s: Stream): BencodeObj =
   # d ... e
   var
-    d: OrderedTable[BencodeObj, BencodeObj]
+    d: OrderedTable[string, BencodeObj]
     isReadingKey = true
-    curKey: BencodeObj
+    curKey: string
   discard s.readChar()  # 'd'
   while not s.atEnd and s.peekChar() != 'e':
     if isReadingKey:
-      curKey = bDecode(s)
+      let keyObj = bDecode(s)
+      if keyObj.kind != bkStr:
+        raise newException(ValueError, "invalid dictionary key: expected " & $bkStr & ", got " & $keyObj.kind)
+      curKey = keyObj.s
       isReadingKey = false
     else:
       d[curKey] = bDecode(s)
@@ -111,11 +113,3 @@ proc bDecode*(source: string): BencodeObj =
 
 proc bDecode*(f: File): BencodeObj =
   bDecode(newFileStream(f))
-
-# helpers #
-
-func `[]`*(d: OrderedTable[BencodeObj, BencodeObj]; key: string): BencodeObj =
-  d[Bencode(key)]
-
-func `[]=`*(d: var OrderedTable[BencodeObj, BencodeObj]; key: string; value: sink BencodeObj) =
-  d[Bencode(key)] = value

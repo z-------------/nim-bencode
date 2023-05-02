@@ -6,12 +6,6 @@ import std/[
 ]
 import ./core
 
-proc asJFieldName(obj: BencodeObj): string =
-  case obj.kind
-  of bkStr: obj.s
-  of bkInt: $obj.i
-  else: $obj
-
 # to #
 
 proc newJArray(elems: seq[JsonNode]): JsonNode =
@@ -35,7 +29,7 @@ proc toJson*(obj: BencodeObj): JsonNode =
   of bkDict:
     newJObject(
       collect(initOrderedTable, for k, v in obj.d.pairs:
-        {k.asJFieldName: v.toJson}
+        {k: v.toJson}
       )
     )
 
@@ -60,7 +54,7 @@ proc fromJson*(j: JsonNode): BencodeObj =
   of JObject:
     Bencode(
       collect(initOrderedTable, for k, v in j.getFields.pairs:
-        {Bencode(k): v.fromJson}
+        {k: v.fromJson}
       )
     )
   of JArray:

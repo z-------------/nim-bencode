@@ -2,11 +2,11 @@ import pkg/bencode
 
 let
   data = be({
-    be("interval"): be(1800),
-    be("min interval"): be(900),
-    be("peers"): be("\x0a\x0a\x0a\x05\x00\x80"),
-    be("complete"): be(20),
-    be("incomplete"): be(0),
+    "interval": be(1800),
+    "min interval": be(900),
+    "peers": be("\x0a\x0a\x0a\x05\x00\x80"),
+    "complete": be(20),
+    "incomplete": be(0),
   })
   bencodedData = bEncode(data)
 

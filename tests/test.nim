@@ -1,4 +1,5 @@
-import bencode
+import ./utils
+import pkg/bencode
 import std/unittest
 import std/[
   json,
@@ -10,10 +11,10 @@ test "basic encode/decode":
     myList = @[Bencode(1), Bencode("hi")]
     myDict =
       {
-        Bencode("name"): Bencode("dmdm"),
-        Bencode("lang"): Bencode("nim"),
-        Bencode("age"): Bencode(50),
-        Bencode("alist"): Bencode(myList),
+        "name": Bencode("dmdm"),
+        "lang": Bencode("nim"),
+        "age": Bencode(50),
+        "alist": Bencode(myList),
       }
     testPairs =
       {
@@ -38,18 +39,16 @@ test "conversion to json":
         {
           "baz": 420,
           "qux": 6969,
-          "6969": "qux"
         }
       ]
     }
     """)
     actual = Bencode({
-      Bencode("foo"): Bencode(69),
-      Bencode("bar"): Bencode(@[
+      "foo": Bencode(69),
+      "bar": Bencode(@[
         Bencode({
-          Bencode("baz"): Bencode(420),
-          Bencode("qux"): Bencode(6969),
-          Bencode(6969): Bencode("qux"),
+          "baz": Bencode(420),
+          "qux": Bencode(6969),
         }),
       ]),
     }).toJson
@@ -59,11 +58,11 @@ test "conversion to json":
 test "conversion from json":
   let
     expected = Bencode({
-      Bencode("foo"): Bencode(69),
-      Bencode("bar"): Bencode(@[
+      "foo": Bencode(69),
+      "bar": Bencode(@[
         Bencode({
-          Bencode("baz"): Bencode(420),
-          Bencode("qux"): Bencode(6969),
+          "baz": Bencode(420),
+          "qux": Bencode(6969),
         }),
         Bencode(3),  # float truncation
       ]),
@@ -119,8 +118,8 @@ test "invalid string length":
 
 test "unexpected end of input":
   check bDecode("l").l == newSeq[BencodeObj]()
-  check bDecode("d").d == initOrderedTable[BencodeObj, BencodeObj]()
-  check bDecode("d5:hello5:world3:foo").d == { Bencode("hello"): Bencode("world") }.toOrderedTable
+  check bDecode("d").d == initOrderedTable[string, BencodeObj]()
+  check bDecode("d5:hello5:world3:foo").d == { "hello": Bencode("world") }.toOrderedTable
 
 test "toBencode":
   let world = "world"
@@ -139,23 +138,28 @@ test "toBencode":
       ],
     },
     "paren": (3 + 4),
-    42: "non-string key",
     "empty list": [],
     "empty dict": {:},
   })
   let expected = Bencode({
-    Bencode("foo"): Bencode([Bencode(1), Bencode(2), Bencode(3)]),
-    Bencode("bar"): Bencode({
-      Bencode("nested"): Bencode(314159),
-      Bencode("nested2"): Bencode([
+    "foo": Bencode([Bencode(1), Bencode(2), Bencode(3)]),
+    "bar": Bencode({
+      "nested": Bencode(314159),
+      "nested2": Bencode([
         Bencode({
-          Bencode("bar"): Bencode("hello world"),
+          "bar": Bencode("hello world"),
         })
       ]),
     }),
-    Bencode("paren"): Bencode(7),
-    Bencode(42): Bencode("non-string key"),
-    Bencode("empty list"): BencodeObj(kind: bkList),
-    Bencode("empty dict"): BencodeObj(kind: bkDict),
+    "paren": Bencode(7),
+    "empty list": BencodeObj(kind: bkList),
+    "empty dict": BencodeObj(kind: bkDict),
   })
   check actual == expected
+
+test "catch wrong dictionary key kind":
+  const data = "d4:name4:dmdmi123e3:nim3:agei50e5:alistli1e2:hiee"
+  let exception =
+    expect(ValueError):
+      discard bDecode(data)
+  check exception.msg == "invalid dictionary key: expected string, got integer"
