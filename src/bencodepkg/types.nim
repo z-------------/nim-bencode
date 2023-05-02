@@ -23,24 +23,28 @@ type
       l*: seq[BencodeObj]
     of bkDict:
       d*: OrderedTable[string, BencodeObj]
+  BencodeFormat* = enum
+    Normal
+    Hexadecimal
+    Decimal
 
 # $ #
 
-func toString*(a: BencodeObj; f = 'u'): string
+func toString*(a: BencodeObj; f = Normal): string
 
-func toString(str: string; f = 'u'): string =
+func toString(str: string; f = Normal): string =
   case f
-  of 'x': str.map(c => "\\x" & ord(c).toHex(2)).join("")
-  of 'd': str.map(c => "\\d" & ord(c).`$`.align(4, '0')).join("")
+  of Hexadecimal: str.map(c => "\\x" & ord(c).toHex(2)).join("")
+  of Decimal: str.map(c => "\\d" & ord(c).`$`.align(4, '0')).join("")
   else: str
 
-func toString(l: seq[BencodeObj]; f = 'u'): string =
+func toString(l: seq[BencodeObj]; f = Normal): string =
   "@[" & l.map(obj => obj.toString(f)).join(", ") & "]"
 
-func toString(d: OrderedTable[string, BencodeObj]; f = 'u'): string =
+func toString(d: OrderedTable[string, BencodeObj]; f = Normal): string =
   "{ " & collect(newSeq, for k, v in d.pairs: k.toString(f) & ": " & v.toString(f)).join(", ") & " }"
 
-func toString*(a: BencodeObj; f = 'u'): string =
+func toString*(a: BencodeObj; f = Normal): string =
   case a.kind
   of bkStr: '"' & a.s.toString(f) & '"'
   of bkInt: $a.i
@@ -48,7 +52,7 @@ func toString*(a: BencodeObj; f = 'u'): string =
   of bkDict: a.d.toString(f)
 
 func `$`*(a: BencodeObj): string =
-  a.toString('u')
+  a.toString(Normal)
 
 # equality #
 
