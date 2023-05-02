@@ -23,7 +23,7 @@ test "basic encode/decode":
         Bencode(55): "i55e",
         Bencode(12345): "i12345e",
         Bencode(myList): "li1e2:hie",
-        Bencode(myDict): "d4:name4:dmdm4:lang3:nim3:agei50e5:alistli1e2:hiee",
+        Bencode(myDict): "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme",
       }.toOrderedTable
 
   for k, v in testPairs.pairs:

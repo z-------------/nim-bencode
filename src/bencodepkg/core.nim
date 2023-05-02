@@ -24,6 +24,10 @@ proc encodeList(l: seq[BencodeObj]): string =
   result &= "e"
 
 proc encodeDict(d: OrderedTable[string, BencodeObj]): string =
+  var d = d
+  d.sort do (x, y: tuple[key: string; value: BencodeObj]) -> int:
+    system.cmp(x.key, y.key)
+
   result = "d"
   for k, v in d.pairs():
     result &= encodeStr(k) & bEncode(v)
