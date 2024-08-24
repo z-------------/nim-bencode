@@ -1,7 +1,7 @@
+import ./private/streams
 import ./types
 import std/[
   parseutils,
-  streams,
   strformat,
   tables,
 ]
@@ -12,6 +12,7 @@ when NimMajor >= 2:
   ]
 
 export types
+export atEnd, readChar, peekChar, getPosition, readStr # why is this needed?
 
 type
   BencodeDecodeErrorKind* = enum
@@ -26,10 +27,10 @@ type
 proc newBencodeDecodeError(pos: int; kind: BencodeDecodeErrorKind; msg: string): ref BencodeDecodeError =
   (ref BencodeDecodeError)(msg: msg, kind: kind, pos: pos)
 
-proc newBencodeDecodeError(s: Stream; kind: BencodeDecodeErrorKind; msg: string): ref BencodeDecodeError =
+proc newBencodeDecodeError(s: var InputStream; kind: BencodeDecodeErrorKind; msg: string): ref BencodeDecodeError =
   newBencodeDecodeError(s.getPosition, kind, msg)
 
-proc consume(s: Stream; c: char) =
+proc consume(s: var InputStream; c: char) =
   ## Check that the char at the current position is `c`, then consume it.
   if s.atEnd:
     raise newBencodeDecodeError(s, UnexpectedEndOfInput, &"expected '{c}', got end of input")
@@ -42,7 +43,7 @@ proc parseInt(str: string; pos: int): int =
   if parseutils.parseInt(str, result) != str.len:
     raise newBencodeDecodeError(pos, SyntaxError, &"invalid integer: {str}")
 
-proc parseHook*(s: Stream; v: var string) =
+proc parseHook*(s: var InputStream; v: var string) =
   # <length>:<contents>
   # get the length
   var lengthStr = ""
@@ -56,13 +57,14 @@ proc parseHook*(s: Stream; v: var string) =
   # read the string
   v =
     if length >= 0:
-      s.readStr(length)
+      try:
+        s.readStr(length)
+      except IOError as e:
+        raise newBencodeDecodeError(s, UnexpectedEndOfInput, e.msg)
     else:
       ""
-  if v.len != length:
-    raise newBencodeDecodeError(s, WrongLength, &"string too short: expected {length} characters, got {v.len} characters")
 
-proc parseHook*(s: Stream; v: var int) =
+proc parseHook*(s: var InputStream; v: var int) =
   # i<ascii>e
   consume(s, 'i')
   var iStr = ""
@@ -71,7 +73,7 @@ proc parseHook*(s: Stream; v: var int) =
   consume(s, 'e')
   v = parseInt(iStr, s.getPosition)
 
-proc parseHook*[T](s: Stream; v: var seq[T]) =
+proc parseHook*[T](s: var InputStream; v: var seq[T]) =
   # l ... e
   v = newSeq[T]()
   consume(s, 'l')
@@ -81,7 +83,7 @@ proc parseHook*[T](s: Stream; v: var seq[T]) =
     v.add(item)
   consume(s, 'e')
 
-proc parseHook*[T; C: static int](s: Stream; v: var array[C, T]) =
+proc parseHook*[T; C: static int](s: var InputStream; v: var array[C, T]) =
   # l ... e
   v = default array[C, T]
   consume(s, 'l')
@@ -97,7 +99,7 @@ proc parseHook*[T; C: static int](s: Stream; v: var array[C, T]) =
 
 type SomeTable[K, V] = Table[K, V] or OrderedTable[K, V]
 
-proc parseHookTableImpl[T](s: Stream; v: var SomeTable[string, T]) =
+proc parseHookTableImpl[T](s: var InputStream; v: var SomeTable[string, T]) =
   # d ... e
   var
     isReadingKey = true
@@ -115,14 +117,14 @@ proc parseHookTableImpl[T](s: Stream; v: var SomeTable[string, T]) =
   # TODO raise on incomplete pair
   consume(s, 'e')
 
-proc parseHook*[T](s: Stream; v: var OrderedTable[string, T]) =
+proc parseHook*[T](s: var InputStream; v: var OrderedTable[string, T]) =
   # why is this needed?
   parseHookTableImpl(s, v)
 
-proc parseHook*[T](s: Stream; v: var Table[string, T]) =
+proc parseHook*[T](s: var InputStream; v: var Table[string, T]) =
   parseHookTableImpl(s, v)
 
-proc parseHook*(s: Stream; v: var BencodeObj) =
+proc parseHook*(s: var InputStream; v: var BencodeObj) =
   assert not s.atEnd
   case s.peekChar()
     of 'i':
@@ -140,7 +142,7 @@ proc parseHook*(s: Stream; v: var BencodeObj) =
 
 import std/json
 
-proc parseHook*(s: Stream; v: var JsonNode) =
+proc parseHook*(s: var InputStream; v: var JsonNode) =
   assert not s.atEnd
   case s.peekChar()
     of 'i':
@@ -162,7 +164,7 @@ proc parseHook*(s: Stream; v: var JsonNode) =
       parseHook(s, value)
       v = newJString(value)
 
-proc parseHook*[T: object](s: Stream; v: var T) =
+proc parseHook*[T: object](s: var InputStream; v: var T) =
   # d ... e
   # TODO Similar to the parseHook for OrderedTable. Unify or factor them somehow?
   var
@@ -180,12 +182,11 @@ proc parseHook*[T: object](s: Stream; v: var T) =
       isReadingKey = true
   consume(s, 'e')
 
-proc parseHook*[T: ref object](s: Stream; v: var T) =
+proc parseHook*[T: ref object](s: var InputStream; v: var T) =
   v = T()
   parseHook(s, v[])
 
-proc fromBencode*(t: typedesc; s: Stream): t =
-  ## Decode bencoded data from `s` into a value of type `t`.
+proc fromBencode(t: typedesc; s: var InputStream): t =
   result = default t
   parseHook(s, result)
 
@@ -204,15 +205,23 @@ proc fromBencode*(t: typedesc; source: string): t =
       c: Bencode("embedded bencode"),
     )
 
-  fromBencode(t, newStringStream(source))
+  var s = toInputStream source
+  fromBencode(t, s)
 
-proc fromBencode*(s: Stream; t: typedesc): t {.deprecated: "use fromBencode(typedesc, Stream) instead".} =
-  ## Logically backwards overload to match jsony's interface.
-  parseHook(s, result)
+import std/streams
+
+proc fromBencode*(t: typedesc; s: Stream): t =
+  ## Decode bencoded data from `s` into a value of type `t`.
+  var s = toInputStream s
+  fromBencode(t, s)
+
+proc fromBencode*(t: typedesc; f: File): t =
+  ## Decode bencoded data from `f` into a value of type `t`.
+  fromBencode(t, newFileStream(f))
 
 proc fromBencode*(source: string; t: typedesc): t {.deprecated: "use fromBencode(typedesc, string) instead".} =
   ## Logically backwards overload to match jsony's interface.
-  fromBencode(t, newStringStream(source))
+  fromBencode(t, source)
 
 proc bDecode*(s: Stream): BencodeObj =
   ## Same as `BencodeObj.fromBencode(s)`.
@@ -223,4 +232,5 @@ proc bDecode*(source: string): BencodeObj =
   fromBencode(BencodeObj, source)
 
 proc bDecode*(f: File): BencodeObj =
-  fromBencode(BencodeObj, newFileStream(f))
+  ## Same as `BencodeObj.fromBencode(f)`.
+  fromBencode(BencodeObj, f)

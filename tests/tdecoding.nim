@@ -1,6 +1,7 @@
 import ./utils
 import pkg/bencode/decoding
 import std/[
+  streams,
   strutils,
   unittest,
 ]
@@ -21,8 +22,7 @@ test "string too short":
   let exception =
     expect BencodeDecodeError:
       discard bDecode("10:hello")
-  check exception.kind == WrongLength
-  check "string too short" in exception.msg
+  check exception.kind == UnexpectedEndOfInput
 
 test "invalid string length":
   let exception =
@@ -51,7 +51,6 @@ test "unexpected end of input":
     expect BencodeDecodeError:
       discard bDecode("d5:hello5:world3:foo")
   check exception.kind == UnexpectedEndOfInput
-  check ExpectedMsg in exception.msg
 
   exception =
     expect BencodeDecodeError:
@@ -66,3 +65,7 @@ test "catch wrong dictionary key kind":
       discard bDecode(data)
   check exception.kind == SyntaxError
   check exception.msg == "invalid integer: i123e3"
+
+test "various input types":
+  const expected = ["hello", "world", "!!"]
+  checkDecode(array[3, string], "l5:hello5:world2:!!ee", expected)

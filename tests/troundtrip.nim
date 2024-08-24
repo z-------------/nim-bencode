@@ -4,6 +4,7 @@ import pkg/bencode/[
   encoding,
 ]
 import std/[
+  streams,
   tables,
   unittest,
 ]
@@ -55,7 +56,7 @@ test "to/from (ref) object":
 
   # decode
   const data = "d3:agei50e7:myarrayl5:hello5:worlde5:alistli1e2:hie4:lang3:nim4:name4:dmdm5:blistli100ei200ee6:mydictd3:foo3:baree"
-  check Record.fromBencode(data) == expectedRecord
+  checkDecode(Record, data, expectedRecord)
   let refRecord = (ref Record).fromBencode(data)
   check refRecord != nil
   check refRecord[] == expectedRecord
