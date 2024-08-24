@@ -1,3 +1,4 @@
+import ./utils
 import pkg/bencode/[
   decoding,
   encoding,
@@ -30,3 +31,74 @@ test "basic encode/decode":
   for k, v in testPairs.pairs:
     check bEncode(k) == v
     check bDecode(v) == k
+
+test "to/from (ref) object":
+  type
+    Record = object
+      name: string
+      lang: string
+      age: int
+      alist: seq[BencodeObj]
+      blist: seq[int]
+      mydict: OrderedTable[string, string]
+      myarray: array[2, string]
+
+  let expectedRecord = Record(
+    name: "dmdm",
+    lang: "nim",
+    age: 50,
+    alist: @[Bencode(1), Bencode("hi")],
+    blist: @[100, 200],
+    mydict: {"foo": "bar"}.toOrderedTable,
+    myarray: ["hello", "world"]
+  )
+
+  # decode
+  const data = "d3:agei50e7:myarrayl5:hello5:worlde5:alistli1e2:hie4:lang3:nim4:name4:dmdm5:blistli100ei200ee6:mydictd3:foo3:baree"
+  check Record.fromBencode(data) == expectedRecord
+  let refRecord = (ref Record).fromBencode(data)
+  check refRecord != nil
+  check refRecord[] == expectedRecord
+  {.push warning[Deprecated]:off.}
+  check data.fromBencode(Record) == expectedRecord
+  {.pop.}
+
+  # encode
+  const dataSorted = "d3:agei50e5:alistli1e2:hie5:blistli100ei200ee4:lang3:nim7:myarrayl5:hello5:worlde6:mydictd3:foo3:bare4:name4:dmdme"
+  check expectedRecord.toBencode == dataSorted
+  check refRecord.toBencode == dataSorted
+
+test "to/from various table types":
+  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"
+  let expectedTablePairs = {
+    "age": Bencode(50),
+    "alist": Bencode(@[Bencode(1), Bencode("hi")]),
+    "lang": Bencode("nim"),
+    "name": Bencode("dmdm"),
+  }
+  check OrderedTable[string, BencodeObj].fromBencode(data) == expectedTablePairs.toOrderedTable
+  check Table[string, BencodeObj].fromBencode(data) == expectedTablePairs.toTable
+  check expectedTablePairs.toOrderedTable.toBencode == data
+  check expectedTablePairs.toTable.toBencode == data
+
+import std/json
+
+test "to JsonNode":
+  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"
+  let expected = %*{
+    "age": 50,
+    "alist": [1, "hi"],
+    "lang": "nim",
+    "name": "dmdm",
+  }
+  check JsonNode.fromBencode(data) == expected
+
+test "to/from array":
+  let exception =
+    expect BencodeDecodeError:
+      discard array[2, string].fromBencode("l5:hello5:world2:!!ee")
+  check exception.kind == WrongLength
+  check exception.msg == "list too long: expected 2 items, got at least 3 items"
+
+  check array[2, string].fromBencode("l5:hello5:worlde") == ["hello", "world"]
+  check ["hello", "world"].toBencode == "l5:hello5:worlde"

@@ -1,5 +1,8 @@
+import ./private/utils
 import ./types
 import std/[
+  algorithm,
+  sequtils,
   tables,
 ]
 
@@ -12,20 +15,30 @@ proc dumpHook*(s: var string; v: int) =
   s &= 'i' & $v & 'e'
 
 proc dumpHook*[T](s: var string; v: openArray[T]) =
-  s &= "l"
+  s &= 'l'
   for el in v:
     dumpHook(s, el)
-  s &= "e"
+  s &= 'e'
 
 proc dumpHook*[T](s: var string; v: OrderedTable[string, T]) =
   var v = v
   v.sort do (x, y: tuple[key: string; value: T]) -> int:
     system.cmp(x.key, y.key)
-  s &= "d"
+  s &= 'd'
   for k, v in v.pairs():
     dumpHook(s, k)
     dumpHook(s, v)
-  s &= "e"
+  s &= 'e'
+
+proc dumpHook*[T](s: var string; v: Table[string, T]) =
+  var pairs = v.pairs.toSeq
+  pairs.sort do (a, b: (string, T)) -> int:
+    system.cmp(a[0], b[0])
+  s &= 'd'
+  for (k, v) in pairs.items:
+    dumpHook(s, k)
+    dumpHook(s, v)
+  s &= 'e'
 
 proc dumpHook*(s: var string; v: BencodeObj) =
   case v.kind
@@ -37,6 +50,21 @@ proc dumpHook*(s: var string; v: BencodeObj) =
     dumpHook(s, v.l)
   of Dict:
     dumpHook(s, v.d)
+
+proc dumpHook*[T: object](s: var string; v: T) =
+  s &= 'd'
+  sortedFieldPairs(v, name, value):
+    dumpHook(s, name)
+    dumpHook(s, value)
+  s &= 'e'
+
+proc dumpHook*[T: ref object](s: var string; v: T) =
+  if v != nil:
+    dumpHook(s, v[])
+
+proc toBencode*[T](v: T): string =
+  result = ""
+  dumpHook(result, v)
 
 proc bEncode*(obj: BencodeObj): string =
   result = ""
