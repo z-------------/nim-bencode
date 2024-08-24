@@ -113,7 +113,7 @@ proc parseHookTableImpl[T](s: Stream; v: var SomeTable[string, T]) =
   consume(s, 'e')
 
 proc parseHook*[T](s: Stream; v: var OrderedTable[string, T]) =
-  # TODO why is this needed?
+  # why is this needed?
   parseHookTableImpl(s, v)
 
 proc parseHook*[T](s: Stream; v: var Table[string, T]) =

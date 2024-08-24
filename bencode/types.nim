@@ -183,6 +183,3 @@ func toBencodeObjImpl(value: NimNode): NimNode =
 
 macro toBencodeObj*(value: untyped): BencodeObj =
   toBencodeObjImpl(value)
-
-macro toBencode*(value: untyped): untyped {.deprecated: "use toBencodeObj instead".} =
-  toBencodeObjImpl(value)

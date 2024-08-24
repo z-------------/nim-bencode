@@ -5,38 +5,39 @@ import std/[
 
 export types
 
-proc bEncode*(obj: BencodeObj): string
+proc dumpHook*(s: var string; v: string) =
+  s &= $v.len & ':' & v
 
-proc encodeStr(s: string): string =
-  $s.len & ':' & s
+proc dumpHook*(s: var string; v: int) =
+  s &= 'i' & $v & 'e'
 
-proc encodeInt(i: int): string =
-  'i' & $i & 'e'
+proc dumpHook*[T](s: var string; v: openArray[T]) =
+  s &= "l"
+  for el in v:
+    dumpHook(s, el)
+  s &= "e"
 
-proc encodeList(l: seq[BencodeObj]): string =
-  result = "l"
-  for el in l:
-    result &= bEncode(el)
-  result &= "e"
-
-proc encodeDict(d: OrderedTable[string, BencodeObj]): string =
-  var d = d
-  d.sort do (x, y: tuple[key: string; value: BencodeObj]) -> int:
+proc dumpHook*[T](s: var string; v: OrderedTable[string, T]) =
+  var v = v
+  v.sort do (x, y: tuple[key: string; value: T]) -> int:
     system.cmp(x.key, y.key)
+  s &= "d"
+  for k, v in v.pairs():
+    dumpHook(s, k)
+    dumpHook(s, v)
+  s &= "e"
 
-  result = "d"
-  for k, v in d.pairs():
-    result &= encodeStr(k) & bEncode(v)
-
-  result &= "e"
+proc dumpHook*(s: var string; v: BencodeObj) =
+  case v.kind
+  of Str:
+    dumpHook(s, v.s)
+  of Int:
+    dumpHook(s, v.i)
+  of List:
+    dumpHook(s, v.l)
+  of Dict:
+    dumpHook(s, v.d)
 
 proc bEncode*(obj: BencodeObj): string =
-  result = case obj.kind
-    of Str:
-      encodeStr(obj.s)
-    of Int:
-      encodeInt(obj.i)
-    of List:
-      encodeList(obj.l)
-    of Dict:
-      encodeDict(obj.d)
+  result = ""
+  dumpHook(result, obj)
