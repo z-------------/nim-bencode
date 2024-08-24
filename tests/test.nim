@@ -1,9 +1,10 @@
 import ./utils
 import pkg/bencode
-import std/unittest
 import std/[
   json,
+  strutils,
   tables,
+  unittest,
 ]
 
 test "basic encode/decode":
@@ -109,17 +110,37 @@ test "execution terminates for invalid bencode input":
       discard
 
 test "string too short":
-  const data = "10:hello"
-  check bDecode(data) == Bencode("hello")
+  let exception =
+    expect ValueError:
+      discard bDecode("10:hello")
+  check "string too short" in exception.msg
 
 test "invalid string length":
-  const data = "-5:hello"
-  check bDecode(data) == Bencode("")
+  let exception =
+    expect ValueError:
+      discard bDecode("-5:hello")
+  check "invalid string length" in exception.msg
 
 test "unexpected end of input":
-  check bDecode("l").l == newSeq[BencodeObj]()
-  check bDecode("d").d == initOrderedTable[string, BencodeObj]()
-  check bDecode("d5:hello5:world3:foo").d == { "hello": Bencode("world") }.toOrderedTable
+  const ExpectedMsg = "expected 'e'"
+
+  var exception: ref ValueError
+  exception =
+    expect ValueError:
+      discard bDecode("l")
+  check ExpectedMsg in exception.msg
+  exception =
+    expect ValueError:
+      discard bDecode("d")
+  check ExpectedMsg in exception.msg
+  exception =
+    expect ValueError:
+      discard bDecode("d5:hello5:world3:foo")
+  check ExpectedMsg in exception.msg
+  exception =
+    expect ValueError:
+      echo bDecode("5")
+  check "expected ':'" in exception.msg
 
 test "toBencode":
   let world = "world"

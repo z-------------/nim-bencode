@@ -1,5 +1,6 @@
 import std/[
   streams,
+  strformat,
   strutils,
   tables,
 ]
@@ -47,7 +48,15 @@ proc bEncode*(obj: BencodeObj): string =
 
 # decode #
 
-proc bDecode*(s: Stream): BencodeObj
+proc consume(s: Stream; c: char) =
+  ## Check that the char at the current position is `c`, then consume it.
+  if s.atEnd:
+    raise (ref ValueError)(msg: &"expected '{c}', got end of input")
+  let actual = s.readChar()
+  if actual != c:
+    raise (ref ValueError)(msg: &"expected '{c}', got {actual}")
+
+proc decode(s: Stream): BencodeObj
 
 proc decodeStr(s: Stream): BencodeObj =
   # <length>:<contents>
@@ -55,8 +64,10 @@ proc decodeStr(s: Stream): BencodeObj =
   var lengthStr = ""
   while not s.atEnd and s.peekChar() != ':':
     lengthStr &= s.readChar()
-  discard s.readChar()  # advance past the ':'
+  consume(s, ':')
   let length = parseInt(lengthStr)
+  if length < 0:
+    raise (ref ValueError)(msg: &"invalid string length: {length}")
 
   # read the string
   let str =
@@ -64,47 +75,49 @@ proc decodeStr(s: Stream): BencodeObj =
       s.readStr(length)
     else:
       ""
+  if str.len != length:
+    raise (ref ValueError)(msg: &"string too short: expected {length} characters, got {str.len} characters")
   BencodeObj(kind: bkStr, s: str)
 
 proc decodeInt(s: Stream): BencodeObj =
   # i<ascii>e
+  consume(s, 'i')
   var iStr = ""
-  discard s.readChar()  # 'i'
   while not s.atEnd and s.peekChar() != 'e':
     iStr &= s.readChar()
-  discard s.readChar()  # 'e'
+  consume(s, 'e')
   BencodeObj(kind: bkInt, i: parseInt(iStr))
 
 proc decodeList(s: Stream): BencodeObj =
   # l ... e
-  var l: seq[BencodeObj]
-  discard s.readChar()  # advance past the 'l'
+  var l = newSeq[BencodeObj]()
+  consume(s, 'l')
   while not s.atEnd and s.peekChar() != 'e':
-    l.add(bDecode(s))
-  discard s.readChar()  # 'e'
+    l.add(decode(s))
+  consume(s, 'e')
   BencodeObj(kind: bkList, l: l)
 
 proc decodeDict(s: Stream): BencodeObj =
   # d ... e
   var
-    d: OrderedTable[string, BencodeObj]
+    d = initOrderedTable[string, BencodeObj]()
     isReadingKey = true
-    curKey: string
-  discard s.readChar()  # 'd'
+    curKey = ""
+  consume(s, 'd')
   while not s.atEnd and s.peekChar() != 'e':
     if isReadingKey:
-      let keyObj = bDecode(s)
+      let keyObj = decode(s)
       if keyObj.kind != bkStr:
-        raise newException(ValueError, "invalid dictionary key: expected " & $bkStr & ", got " & $keyObj.kind)
+        raise newException(ValueError, &"invalid dictionary key: expected {bkStr}, got {keyObj.kind}")
       curKey = keyObj.s
       isReadingKey = false
     else:
-      d[curKey] = bDecode(s)
+      d[curKey] = decode(s)
       isReadingKey = true
-  discard s.readChar()  # 'e'
+  consume(s, 'e')
   BencodeObj(kind: bkDict, d: d)
 
-proc bDecode*(s: Stream): BencodeObj =
+proc decode(s: Stream): BencodeObj =
   assert not s.atEnd
   result = case s.peekChar()
     of 'i': decodeInt(s)
@@ -112,8 +125,11 @@ proc bDecode*(s: Stream): BencodeObj =
     of 'd': decodeDict(s)
     else: decodeStr(s)
 
+proc bDecode*(s: Stream): BencodeObj =
+  decode(s)
+
 proc bDecode*(source: string): BencodeObj =
-  bDecode(newStringStream(source))
+  decode(newStringStream(source))
 
 proc bDecode*(f: File): BencodeObj =
-  bDecode(newFileStream(f))
+  decode(newFileStream(f))
