@@ -1,5 +1,7 @@
-import ./private/streams
-import ./types
+import ./[
+  inputstreams,
+  types,
+]
 import std/[
   parseutils,
   strformat,
@@ -11,6 +13,7 @@ when NimMajor >= 2:
     syncio,
   ]
 
+export InputStream
 export types
 export atEnd, readChar, peekChar, getPosition, readStr # why is this needed?
 
@@ -38,7 +41,7 @@ proc consume(s: var InputStream; c: char) =
     raise newBencodeDecodeError(s, SyntaxError, &"expected '{c}', got {actual}")
 
 proc parseInt(str: string; pos: int): int =
-  result = 0 # parseutils.parseInt's second parameter really should be marked `out`
+  result = 0
   if parseutils.parseInt(str, result) != str.len:
     raise newBencodeDecodeError(pos, SyntaxError, &"invalid integer: {str}")
 
