@@ -57,6 +57,20 @@ proc parseHook*[T](s: Stream; v: var seq[T]) =
     v.add(item)
   consume(s, 'e')
 
+proc parseHook*[T; C: static int](s: Stream; v: var array[C, T]) =
+  # l ... e
+  v = default array[C, T]
+  consume(s, 'l')
+  var i = 0
+  while not s.atEnd and s.peekChar() != 'e':
+    if i >= C:
+      raise (ref ValueError)(msg: &"list too long: expected {C} items, got at least {i + 1} items")
+    var item = default T
+    parseHook(s, item)
+    v[i] = item
+    inc i
+  consume(s, 'e')
+
 type SomeTable[K, V] = Table[K, V] or OrderedTable[K, V]
 
 proc parseHookTableImpl[T](s: Stream; v: var SomeTable[string, T]) =

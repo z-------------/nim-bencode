@@ -67,6 +67,7 @@ test "deserialization to (ref) object":
       alist: seq[BencodeObj]
       blist: seq[int]
       mydict: OrderedTable[string, string]
+      myarray: array[2, string]
 
   let expectedRecord = Record(
     name: "dmdm",
@@ -75,9 +76,10 @@ test "deserialization to (ref) object":
     alist: @[Bencode(1), Bencode("hi")],
     blist: @[100, 200],
     mydict: {"foo": "bar"}.toOrderedTable,
+    myarray: ["hello", "world"]
   )
 
-  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdm5:blistli100ei200ee6:mydictd3:foo3:baree"
+  const data = "d3:agei50e7:myarrayl5:hello5:worlde5:alistli1e2:hie4:lang3:nim4:name4:dmdm5:blistli100ei200ee6:mydictd3:foo3:baree"
   check Record.fromBencode(data) == expectedRecord
   let refRecord = (ref Record).fromBencode(data)
   check refRecord != nil
@@ -109,3 +111,9 @@ test "deserialization to JsonNode":
     "name": "dmdm",
   }
   check JsonNode.fromBencode(data) == expected
+
+test "list too long for array":
+  let exception =
+    expect ValueError:
+      discard array[2, string].fromBencode("l5:hello5:world2:!!ee")
+  check exception.msg == "list too long: expected 2 items, got at least 3 items"
