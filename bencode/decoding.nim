@@ -88,16 +88,16 @@ proc parseHook*(s: Stream; v: var BencodeObj) =
   assert not s.atEnd
   case s.peekChar()
     of 'i':
-      v = BencodeObj(kind: bkInt)
+      v = BencodeObj(kind: Int)
       parseHook(s, v.i)
     of 'l':
-      v = BencodeObj(kind: bkList)
+      v = BencodeObj(kind: List)
       parseHook(s, v.l)
     of 'd':
-      v = BencodeObj(kind: bkDict)
+      v = BencodeObj(kind: Dict)
       parseHook(s, v.d)
     else:
-      v = BencodeObj(kind: bkStr)
+      v = BencodeObj(kind: Str)
       parseHook(s, v.s)
 
 import std/json

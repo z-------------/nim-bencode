@@ -49,8 +49,8 @@ test "toBencodeObj":
       ]),
     }),
     "paren": Bencode(7),
-    "empty list": BencodeObj(kind: bkList),
-    "empty dict": BencodeObj(kind: bkDict),
+    "empty list": BencodeObj(kind: List),
+    "empty dict": BencodeObj(kind: Dict),
   })
   check actual == expected
 

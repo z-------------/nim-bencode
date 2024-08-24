@@ -18,15 +18,15 @@ proc newJObject(fields: OrderedTable[string, JsonNode]): JsonNode =
 
 proc toJson*(obj: BencodeObj): JsonNode =
   case obj.kind
-  of bkStr:
+  of Str:
     newJString(obj.s)
-  of bkInt:
+  of Int:
     newJInt(obj.i)
-  of bkList:
+  of List:
     newJArray(
       collect(newSeq, for x in obj.l: x.toJson)
     )
-  of bkDict:
+  of Dict:
     newJObject(
       collect(initOrderedTable, for k, v in obj.d.pairs:
         {k: v.toJson}

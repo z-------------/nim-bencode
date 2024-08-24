@@ -32,11 +32,11 @@ proc encodeDict(d: OrderedTable[string, BencodeObj]): string =
 
 proc bEncode*(obj: BencodeObj): string =
   result = case obj.kind
-    of bkStr:
+    of Str:
       encodeStr(obj.s)
-    of bkInt:
+    of Int:
       encodeInt(obj.i)
-    of bkList:
+    of List:
       encodeList(obj.l)
-    of bkDict:
+    of Dict:
       encodeDict(obj.d)

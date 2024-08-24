@@ -1,67 +1,91 @@
 import std/[
+  enumerate,
   hashes,
   macros,
   sequtils,
   strutils,
-  sugar,
   tables,
 ]
 
 type
   BencodeKind* = enum
-    bkStr = "string"
-    bkInt = "integer"
-    bkList = "list"
-    bkDict = "dictionary"
+    Str = "string"
+    Int = "integer"
+    List = "list"
+    Dict = "dictionary"
   BencodeObj* = object
     case kind*: BencodeKind
-    of bkStr:
+    of Str:
       s*: string
-    of bkInt:
+    of Int:
       i*: int
-    of bkList:
+    of List:
       l*: seq[BencodeObj]
-    of bkDict:
+    of Dict:
       d*: OrderedTable[string, BencodeObj]
   BencodeFormat* = enum
     Normal
     Hexadecimal
     Decimal
 
+const
+  bkStr* {.deprecated: "use Str instead".} = BencodeKind.Str
+  bkInt* {.deprecated: "use Int instead".} = BencodeKind.Int
+  bkList* {.deprecated: "use List instead".} = BencodeKind.List
+  bkDict* {.deprecated: "use Dict instead".} = BencodeKind.Dict
+
 # $ #
 
-func toString*(a: BencodeObj; f = Normal): string
+func toString*(a: BencodeObj; f = Normal): string {.raises: [].}
 
 func toString(str: string; f = Normal): string =
+  result = ""
   case f
-  of Hexadecimal: str.map(c => "\\x" & ord(c).toHex(2)).join("")
-  of Decimal: str.map(c => "\\d" & ord(c).`$`.align(4, '0')).join("")
-  else: str
+  of Hexadecimal:
+    for c in str:
+      result.add "\\x" & c.ord.toHex(2)
+  of Decimal:
+    for c in str:
+      result.add "\\d" & ($c.ord).align(4, '0')
+  else:
+    result = str
 
 func toString(l: seq[BencodeObj]; f = Normal): string =
-  "@[" & l.map(obj => obj.toString(f)).join(", ") & "]"
+  result = "@["
+  for i, obj in l.pairs:
+    if i != 0:
+      result &= ", "
+    result &= obj.toString(f)
+  result &= "]"
 
 func toString(d: OrderedTable[string, BencodeObj]; f = Normal): string =
-  "{ " & collect(newSeq, for k, v in d.pairs: k.toString(f) & ": " & v.toString(f)).join(", ") & " }"
+  result = "{ "
+  for i, (k, v) in enumerate(d.pairs):
+    if i != 0:
+      result &= ", "
+    result &= k.toString(f)
+    result &= ": "
+    result &= v.toString(f)
+  result &= " }"
 
 func toString*(a: BencodeObj; f = Normal): string =
   case a.kind
-  of bkStr: '"' & a.s.toString(f) & '"'
-  of bkInt: $a.i
-  of bkList: a.l.toString(f)
-  of bkDict: a.d.toString(f)
+  of Str: '"' & a.s.toString(f) & '"'
+  of Int: $a.i
+  of List: a.l.toString(f)
+  of Dict: a.d.toString(f)
 
-func `$`*(a: BencodeObj): string =
+func `$`*(a: BencodeObj): string {.raises: [].} =
   a.toString(Normal)
 
 # equality #
 
 func hash*(obj: BencodeObj): Hash =
   case obj.kind
-  of bkStr: !$(hash(obj.s))
-  of bkInt: !$(hash(obj.i))
-  of bkList: !$(hash(obj.l))
-  of bkDict:
+  of Str: !$(hash(obj.s))
+  of Int: !$(hash(obj.i))
+  of List: !$(hash(obj.l))
+  of Dict:
     var h = default Hash
     for k, v in obj.d.pairs:
       h = hash(k) !& hash(v)
@@ -69,16 +93,16 @@ func hash*(obj: BencodeObj): Hash =
 
 func `==`*(a, b: BencodeObj): bool =
   if a.kind != b.kind:
-    result = false
+    false
   else:
     case a.kind
-    of bkStr:
-      result = a.s == b.s
-    of bkInt:
-      result = a.i == b.i
-    of bkList:
-      result = a.l == b.l
-    of bkDict:
+    of Str:
+      a.s == b.s
+    of Int:
+      a.i == b.i
+    of List:
+      a.l == b.l
+    of Dict:
       if a.d.len != b.d.len:
         return false
       for key in a.d.keys:
@@ -86,7 +110,7 @@ func `==`*(a, b: BencodeObj): bool =
           return false
         if a.d[key] != b.d[key]:
           return false
-      result = true
+      true
 
 # constructors #
 
@@ -111,19 +135,19 @@ macro alias(name, procDef: untyped): untyped =
   newStmtList(procDef, aliasProcDef)
 
 proc Bencode*(s: sink string): BencodeObj {.alias: be.} =
-  BencodeObj(kind: bkStr, s: s)
+  BencodeObj(kind: Str, s: s)
 
 proc Bencode*(i: int): BencodeObj {.alias: be.} =
-  BencodeObj(kind: bkInt, i: i)
+  BencodeObj(kind: Int, i: i)
 
 proc Bencode*(l: sink seq[BencodeObj]): BencodeObj {.alias: be.} =
-  BencodeObj(kind: bkList, l: l)
+  BencodeObj(kind: List, l: l)
 
 proc Bencode*(l: sink openArray[BencodeObj]): BencodeObj {.alias: be.} =
-  BencodeObj(kind: bkList, l: l.toSeq)
+  BencodeObj(kind: List, l: l.toSeq)
 
 proc Bencode*(d: sink OrderedTable[string, BencodeObj]): BencodeObj {.alias: be.} =
-  BencodeObj(kind: bkDict, d: d)
+  BencodeObj(kind: Dict, d: d)
 
 proc Bencode*(d: sink openArray[(string, BencodeObj)]): BencodeObj {.alias: be.} =
   Bencode(d.toOrderedTable)
@@ -133,7 +157,7 @@ func toBencodeObjImpl(value: NimNode): NimNode =
   case value.kind
   of nnkBracket: # array
     if value.len == 0:
-      quote: BencodeObj(kind: bkList)
+      quote: BencodeObj(kind: List)
     else:
       var bracketNode = nnkBracket.newNimNode()
       for i in 0 ..< value.len:
@@ -141,7 +165,7 @@ func toBencodeObjImpl(value: NimNode): NimNode =
       newCall(bindSym("Bencode", brOpen), bracketNode)
   of nnkTableConstr: # object
     if value.len == 0:
-      quote: BencodeObj(kind: bkDict)
+      quote: BencodeObj(kind: Dict)
     else:
       var tableNode = nnkTableConstr.newNimNode()
       for i in 0 ..< value.len:
