@@ -11,7 +11,7 @@ jobs:
       matrix:
         nimVersion:
           - stable
-          - 1.6.20
+          - 2.0.8
         nimMm:
           - orc
           - arc
