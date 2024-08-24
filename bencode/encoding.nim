@@ -23,14 +23,23 @@ proc dumpHook*[T](s: var string; v: openArray[T]) =
     dumpHook(s, el)
   s &= 'e'
 
+template maybeDumpDictPair(s: var string; k, v: untyped) =
+  # TODO skipHook for values
+  when v is ref:
+    if v != nil:
+      dumpHook(s, k)
+      dumpHook(s, v)
+  else:
+    dumpHook(s, k)
+    dumpHook(s, v)
+
 proc dumpHook*[T](s: var string; v: OrderedTable[string, T]) =
   var v = v
   v.sort do (x, y: tuple[key: string; value: T]) -> int:
     system.cmp(x.key, y.key)
   s &= 'd'
   for k, v in v.pairs():
-    dumpHook(s, k)
-    dumpHook(s, v)
+    maybeDumpDictPair(s, k, v)
   s &= 'e'
 
 proc dumpHook*[T](s: var string; v: Table[string, T]) =
@@ -39,8 +48,7 @@ proc dumpHook*[T](s: var string; v: Table[string, T]) =
     system.cmp(a[0], b[0])
   s &= 'd'
   for (k, v) in pairs.items:
-    dumpHook(s, k)
-    dumpHook(s, v)
+    maybeDumpDictPair(s, k, v)
   s &= 'e'
 
 proc dumpHook*(s: var string; v: BencodeObj) =
@@ -67,25 +75,25 @@ proc dumpHook*[T: JsonNode](s: var string; v: T) =
   of JObject:
     dumpHook(s, v.getFields)
   of JNull:
-    raise (ref BencodeEncodeError)(msg: "cannot bencode JSON null")
+    raise (ref BencodeEncodeError)(msg: "cannot bencode a JSON null")
   of JFloat:
     when compiles(dumpHook(s, v.getFloat)):
       dumpHook(s, v.getFloat)
     else:
-      raise (ref BencodeEncodeError)(msg: "cannot bencode JSON float")
+      raise (ref BencodeEncodeError)(msg: "cannot bencode a JSON float")
   of JBool:
     dumpHook(s, v.getBool.int)
 
 proc dumpHook*[T: object](s: var string; v: T) =
   s &= 'd'
   sortedFieldPairs(v, name, value):
-    dumpHook(s, name)
-    dumpHook(s, value)
+    maybeDumpDictPair(s, name, value)
   s &= 'e'
 
 proc dumpHook*[T: ref object](s: var string; v: T) =
-  if v != nil:
-    dumpHook(s, v[])
+  if v == nil:
+    raise (ref BencodeEncodeError)(msg: "cannot bencode a nil ref")
+  dumpHook(s, v[])
 
 proc toBencode*[T](v: T): string =
   ## Encode `v` as bencode.

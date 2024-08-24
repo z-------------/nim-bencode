@@ -105,3 +105,18 @@ test "to/from array":
 
   check array[2, string].fromBencode("l5:hello5:worlde") == ["hello", "world"]
   check ["hello", "world"].toBencode == "l5:hello5:worlde"
+
+test "nil ref objects":
+  type
+    Foo = object
+      s: string
+    Bar = object
+      e: int
+      f: ref Foo
+      g: string
+
+  let bar = Bar(e: 321, f: nil, g: "hi")
+  const expected = "d1:ei321e1:g2:hie"
+  let actual = bar.toBencode
+  check actual == expected
+  check Bar.fromBencode(actual) == bar
