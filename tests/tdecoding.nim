@@ -22,7 +22,7 @@ test "string too short":
   let exception =
     expect BencodeDecodeError:
       discard bDecode("10:hello")
-  check exception.kind == UnexpectedEndOfInput
+  check exception.kind == SyntaxError
 
 test "invalid string length":
   let exception =
@@ -32,30 +32,41 @@ test "invalid string length":
   check "invalid string length" in exception.msg
 
 test "unexpected end of input":
-  const ExpectedMsg = "expected 'e'"
-
   var exception: ref BencodeDecodeError
   exception =
     expect BencodeDecodeError:
       discard bDecode("l")
-  check exception.kind == UnexpectedEndOfInput
-  check ExpectedMsg in exception.msg
+  check exception.kind == SyntaxError
+  check "expected 'e'" in exception.msg
 
   exception =
     expect BencodeDecodeError:
       discard bDecode("d")
-  check exception.kind == UnexpectedEndOfInput
-  check ExpectedMsg in exception.msg
+  check exception.kind == SyntaxError
+  check "expected 'e'" in exception.msg
+
+  exception =
+    expect BencodeDecodeError:
+      discard bDecode("d5:hello5:world3:foo3:bar")
+  check exception.kind == SyntaxError
+  check "expected 'e'" in exception.msg
 
   exception =
     expect BencodeDecodeError:
       discard bDecode("d5:hello5:world3:foo")
-  check exception.kind == UnexpectedEndOfInput
+  check exception.kind == SyntaxError
+  check "expected value" in exception.msg
+
+  exception =
+    expect BencodeDecodeError:
+      discard bDecode("d5:hello5:world3:fooe")
+  check exception.kind == SyntaxError
+  check "expected value" in exception.msg
 
   exception =
     expect BencodeDecodeError:
       echo bDecode("5")
-  check exception.kind == UnexpectedEndOfInput
+  check exception.kind == SyntaxError
   check "expected ':'" in exception.msg
 
 test "catch wrong dictionary key kind":

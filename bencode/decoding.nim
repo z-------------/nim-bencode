@@ -17,7 +17,6 @@ export atEnd, readChar, peekChar, getPosition, readStr # why is this needed?
 type
   BencodeDecodeErrorKind* = enum
     SyntaxError
-    UnexpectedEndOfInput
     WrongLength
     InvalidValue
   BencodeDecodeError* = object of ValueError
@@ -33,7 +32,7 @@ proc newBencodeDecodeError(s: var InputStream; kind: BencodeDecodeErrorKind; msg
 proc consume(s: var InputStream; c: char) =
   ## Check that the char at the current position is `c`, then consume it.
   if s.atEnd:
-    raise newBencodeDecodeError(s, UnexpectedEndOfInput, &"expected '{c}', got end of input")
+    raise newBencodeDecodeError(s, SyntaxError, &"expected '{c}', got end of input")
   let actual = s.readChar()
   if actual != c:
     raise newBencodeDecodeError(s, SyntaxError, &"expected '{c}', got {actual}")
@@ -60,7 +59,7 @@ proc parseHook*(s: var InputStream; v: var string) =
       try:
         s.readStr(length)
       except IOError as e:
-        raise newBencodeDecodeError(s, UnexpectedEndOfInput, e.msg)
+        raise newBencodeDecodeError(s, SyntaxError, e.msg)
     else:
       ""
 
@@ -110,7 +109,8 @@ template parseHookDictImpl(s: var InputStream; body: untyped) =
     else:
       body
       isReadingKey = true
-  # TODO raise on incomplete pair
+  if not isReadingKey:
+    raise newBencodeDecodeError(s, SyntaxError, "expected value, got end of dict")
   consume(s, 'e')
 
 type SomeTable[K, V] = Table[K, V] or OrderedTable[K, V]
