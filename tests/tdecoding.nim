@@ -125,3 +125,14 @@ test "deserialization to object":
     alist: @[Bencode(1), Bencode("hi")],
   )
   check record == data.fromBencode(Record)
+
+test "various table types":
+  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"
+  let expectedTablePairs = {
+    "age": Bencode(50),
+    "alist": Bencode(@[Bencode(1), Bencode("hi")]),
+    "lang": Bencode("nim"),
+    "name": Bencode("dmdm"),
+  }
+  check OrderedTable[string, BencodeObj].fromBencode(data) == expectedTablePairs.toOrderedTable
+  check Table[string, BencodeObj].fromBencode(data) == expectedTablePairs.toTable

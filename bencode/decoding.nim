@@ -16,7 +16,7 @@ proc consume(s: Stream; c: char) =
   if actual != c:
     raise (ref ValueError)(msg: &"expected '{c}', got {actual}")
 
-proc parseHook(s: Stream; v: var string) =
+proc parseHook*(s: Stream; v: var string) =
   # <length>:<contents>
   # get the length
   var lengthStr = ""
@@ -36,7 +36,7 @@ proc parseHook(s: Stream; v: var string) =
   if v.len != length:
     raise (ref ValueError)(msg: &"string too short: expected {length} characters, got {v.len} characters")
 
-proc parseHook(s: Stream; v: var int) =
+proc parseHook*(s: Stream; v: var int) =
   # i<ascii>e
   consume(s, 'i')
   var iStr = ""
@@ -45,7 +45,7 @@ proc parseHook(s: Stream; v: var int) =
   consume(s, 'e')
   v = parseInt(iStr)
 
-proc parseHook[T](s: Stream; v: var seq[T]) =
+proc parseHook*[T](s: Stream; v: var seq[T]) =
   # l ... e
   v = newSeq[T]()
   consume(s, 'l')
@@ -55,7 +55,9 @@ proc parseHook[T](s: Stream; v: var seq[T]) =
     v.add(item)
   consume(s, 'e')
 
-proc parseHook[T](s: Stream; v: var OrderedTable[string, T]) =
+type SomeTable[K, V] = Table[K, V] or OrderedTable[K, V]
+
+proc parseHookTableImpl[T](s: Stream; v: var SomeTable[string, T]) =
   # d ... e
   var
     isReadingKey = true
@@ -72,7 +74,14 @@ proc parseHook[T](s: Stream; v: var OrderedTable[string, T]) =
       isReadingKey = true
   consume(s, 'e')
 
-proc parseHook(s: Stream; v: var BencodeObj) =
+proc parseHook*[T](s: Stream; v: var OrderedTable[string, T]) =
+  # TODO why is this needed?
+  parseHookTableImpl(s, v)
+
+proc parseHook*[T](s: Stream; v: var Table[string, T]) =
+  parseHookTableImpl(s, v)
+
+proc parseHook*(s: Stream; v: var BencodeObj) =
   assert not s.atEnd
   case s.peekChar()
     of 'i':
@@ -88,7 +97,7 @@ proc parseHook(s: Stream; v: var BencodeObj) =
       v = BencodeObj(kind: bkStr)
       parseHook(s, v.s)
 
-proc parseHook(s: Stream; v: var object) =
+proc parseHook*(s: Stream; v: var object) =
   # d ... e
   # TODO Similar to the parseHook for OrderedTable. Unify or factor them somehow?
   var
