@@ -6,7 +6,10 @@ import ./bencode/[
 export decoding, encoding
 
 when isMainModule:
-  import std/os
+  import std/[
+    os,
+    syncio,
+  ]
 
   proc parseFormatArg(arg: string): BencodeFormat =
     if arg.len < 2: quit("Invalid argument.")

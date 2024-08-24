@@ -1,4 +1,5 @@
 import pkg/bencode
+import std/assertions
 
 let
   data = be({
