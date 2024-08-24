@@ -128,6 +128,38 @@ proc parseHook(s: Stream; v: var BencodeObj) =
       v = BencodeObj(kind: bkStr)
       parseHook(s, v.s)
 
+proc parseHook(s: Stream; v: var object) =
+  # d ... e
+  # TODO Similar to the parseHook for OrderedTable. Unify or factor them somehow?
+  var
+    isReadingKey = true
+    curKey = ""
+  consume(s, 'd')
+  while not s.atEnd and s.peekChar() != 'e':
+    if isReadingKey:
+      parseHook(s, curKey)
+      isReadingKey = false
+    else:
+      for name, value in fieldPairs(v):
+        if name == curKey:
+          parseHook(s, value)
+      isReadingKey = true
+  consume(s, 'e')
+
+proc fromBencode*(t: typedesc; s: Stream): t =
+  parseHook(s, result)
+
+proc fromBencode*(t: typedesc; source: string): t =
+  fromBencode(t, newStringStream(source))
+
+proc fromBencode*(s: Stream; t: typedesc): t {.deprecated: "use fromBencode(typedesc, Stream) instead".} =
+  ## Logically backwards overload to match jsony's interface.
+  parseHook(s, result)
+
+proc fromBencode*(source: string; t: typedesc): t {.deprecated: "use fromBencode(typedesc, string) instead".} =
+  ## Logically backwards overload to match jsony's interface.
+  fromBencode(t, newStringStream(source))
+
 proc bDecode*(s: Stream): BencodeObj =
   parseHook(s, result)
 

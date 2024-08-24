@@ -131,3 +131,21 @@ test "catch wrong dictionary key kind":
     expect(ValueError):
       discard bDecode(data)
   check exception.msg == "invalid integer: i123e3"
+
+test "deserialization to object":
+  type
+    Record = object
+      name: string
+      lang: string
+      age: int
+      alist: seq[BencodeObj]
+
+  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"
+  let record = Record.fromBencode(data)
+  check record == Record(
+    name: "dmdm",
+    lang: "nim",
+    age: 50,
+    alist: @[Bencode(1), Bencode("hi")],
+  )
+  check record == data.fromBencode(Record)
