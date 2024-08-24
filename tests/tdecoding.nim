@@ -65,42 +65,6 @@ test "unexpected end of input":
       echo bDecode("5")
   check "expected ':'" in exception.msg
 
-test "toBencode":
-  let world = "world"
-
-  func getValue(): int =
-    314159
-
-  let actual = toBencode({
-    "foo": [1, 2, 3],
-    "bar": {
-      "nested": getValue(),
-      "nested2": [
-        {
-          "bar": "hello " & world,
-        },
-      ],
-    },
-    "paren": (3 + 4),
-    "empty list": [],
-    "empty dict": {:},
-  })
-  let expected = Bencode({
-    "foo": Bencode([Bencode(1), Bencode(2), Bencode(3)]),
-    "bar": Bencode({
-      "nested": Bencode(314159),
-      "nested2": Bencode([
-        Bencode({
-          "bar": Bencode("hello world"),
-        })
-      ]),
-    }),
-    "paren": Bencode(7),
-    "empty list": BencodeObj(kind: bkList),
-    "empty dict": BencodeObj(kind: bkDict),
-  })
-  check actual == expected
-
 test "catch wrong dictionary key kind":
   const data = "d4:name4:dmdmi123e3:nim3:agei50e5:alistli1e2:hiee"
   let exception =

@@ -90,25 +90,45 @@ func `==`*(a, b: BencodeObj): bool =
 
 # constructors #
 
-proc Bencode*(s: sink string): BencodeObj =
+proc `name=`(procDef, name: NimNode) =
+  procDef.expectKind nnkProcDef
+  name.expectKind {nnkIdent, nnkSym}
+
+  case procDef[0].kind
+  of nnkPostfix:
+    procDef[0][1] = name
+  of nnkIdent:
+    procDef[0] = name
+  else:
+    error("unexpected node kind", procDef[0])
+
+macro alias(name, procDef: untyped): untyped =
+  procDef.expectKind nnkProcDef
+  name.expectKind {nnkIdent, nnkSym}
+
+  let aliasProcDef = procDef.copy
+  aliasProcDef.name = name
+  newStmtList(procDef, aliasProcDef)
+
+proc Bencode*(s: sink string): BencodeObj {.alias: be.} =
   BencodeObj(kind: bkStr, s: s)
 
-proc Bencode*(i: int): BencodeObj =
+proc Bencode*(i: int): BencodeObj {.alias: be.} =
   BencodeObj(kind: bkInt, i: i)
 
-proc Bencode*(l: sink seq[BencodeObj]): BencodeObj =
+proc Bencode*(l: sink seq[BencodeObj]): BencodeObj {.alias: be.} =
   BencodeObj(kind: bkList, l: l)
 
-proc Bencode*(l: sink openArray[BencodeObj]): BencodeObj =
+proc Bencode*(l: sink openArray[BencodeObj]): BencodeObj {.alias: be.} =
   BencodeObj(kind: bkList, l: l.toSeq)
 
-proc Bencode*(d: sink OrderedTable[string, BencodeObj]): BencodeObj =
+proc Bencode*(d: sink OrderedTable[string, BencodeObj]): BencodeObj {.alias: be.} =
   BencodeObj(kind: bkDict, d: d)
 
-proc Bencode*(d: sink openArray[(string, BencodeObj)]): BencodeObj =
+proc Bencode*(d: sink openArray[(string, BencodeObj)]): BencodeObj {.alias: be.} =
   Bencode(d.toOrderedTable)
 
-func toBencodeImpl(value: NimNode): NimNode =
+func toBencodeObjImpl(value: NimNode): NimNode =
   # Adapted from std/json's `%*`: https://github.com/nim-lang/Nim/blob/0b44840299c15faa3b74cb82f48dcd56023f7d35/lib/pure/json.nim#L411
   case value.kind
   of nnkBracket: # array
@@ -117,7 +137,7 @@ func toBencodeImpl(value: NimNode): NimNode =
     else:
       var bracketNode = nnkBracket.newNimNode()
       for i in 0 ..< value.len:
-        bracketNode.add(toBencodeImpl(value[i]))
+        bracketNode.add(toBencodeObjImpl(value[i]))
       newCall(bindSym("Bencode", brOpen), bracketNode)
   of nnkTableConstr: # object
     if value.len == 0:
@@ -126,32 +146,19 @@ func toBencodeImpl(value: NimNode): NimNode =
       var tableNode = nnkTableConstr.newNimNode()
       for i in 0 ..< value.len:
         value[i].expectKind nnkExprColonExpr
-        tableNode.add nnkExprColonExpr.newTree(value[i][0], toBencodeImpl(value[i][1]))
+        tableNode.add nnkExprColonExpr.newTree(value[i][0], toBencodeObjImpl(value[i][1]))
       newCall(bindSym("Bencode", brOpen), tableNode)
   of nnkPar:
     if value.len == 1:
-      toBencodeImpl(value[0])
+      toBencodeObjImpl(value[0])
     else:
       # what is this?
       newCall(bindSym("Bencode", brOpen), value)
   else:
     newCall(bindSym("Bencode", brOpen), value)
 
-macro toBencode*(value: untyped): untyped =
-  toBencodeImpl(value)
+macro toBencodeObj*(value: untyped): BencodeObj =
+  toBencodeObjImpl(value)
 
-template be*(strVal: string): BencodeObj =
-  BencodeObj(kind: bkStr, s: strVal)
-
-template be*(intVal: int): BencodeObj =
-  BencodeObj(kind: bkInt, i: intVal)
-
-template be*(listVal: seq[BencodeObj]): BencodeObj =
-  BencodeObj(kind: bkList, l: listVal)
-
-template be*(dictVal: OrderedTable[string, BencodeObj]): BencodeObj =
-  BencodeObj(kind: bkDict, d: dictVal)
-
-template be*(dictVal: openArray[(string, BencodeObj)]): BencodeObj =
-  mixin toOrderedTable
-  BencodeObj(kind: bkDict, d: dictVal.toOrderedTable)
+macro toBencode*(value: untyped): untyped {.deprecated: "use toBencodeObj instead".} =
+  toBencodeObjImpl(value)
