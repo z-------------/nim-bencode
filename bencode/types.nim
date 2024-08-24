@@ -62,7 +62,7 @@ func hash*(obj: BencodeObj): Hash =
   of bkInt: !$(hash(obj.i))
   of bkList: !$(hash(obj.l))
   of bkDict:
-    var h: Hash
+    var h = default Hash
     for k, v in obj.d.pairs:
       h = hash(k) !& hash(v)
     !$(h)

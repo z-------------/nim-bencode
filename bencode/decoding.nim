@@ -52,7 +52,7 @@ proc parseHook*[T](s: Stream; v: var seq[T]) =
   v = newSeq[T]()
   consume(s, 'l')
   while not s.atEnd and s.peekChar() != 'e':
-    var item: T
+    var item = default T
     parseHook(s, item)
     v.add(item)
   consume(s, 'e')
@@ -70,10 +70,11 @@ proc parseHookTableImpl[T](s: Stream; v: var SomeTable[string, T]) =
       parseHook(s, curKey)
       isReadingKey = false
     else:
-      var value: T
+      var value = default T
       parseHook(s, value)
       v[curKey] = value
       isReadingKey = true
+  # TODO raise on incomplete pair
   consume(s, 'e')
 
 proc parseHook*[T](s: Stream; v: var OrderedTable[string, T]) =
@@ -105,21 +106,21 @@ proc parseHook*(s: Stream; v: var JsonNode) =
   assert not s.atEnd
   case s.peekChar()
     of 'i':
-      var value: int
+      var value = default int
       parseHook(s, value)
       v = newJInt(value)
     of 'l':
-      var value: seq[JsonNode]
+      var value = default seq[JsonNode]
       parseHook(s, value)
       v = newJArray()
       v.elems = value
     of 'd':
-      var value: OrderedTable[string, JsonNode]
+      var value = default OrderedTable[string, JsonNode]
       parseHook(s, value)
       v = newJObject()
       v.fields = value
     else:
-      var value: string
+      var value = default string
       parseHook(s, value)
       v = newJString(value)
 
@@ -146,6 +147,7 @@ proc parseHook*[T: ref object](s: Stream; v: var T) =
   parseHook(s, v[])
 
 proc fromBencode*(t: typedesc; s: Stream): t =
+  result = default t
   parseHook(s, result)
 
 proc fromBencode*(t: typedesc; source: string): t =
@@ -160,6 +162,7 @@ proc fromBencode*(source: string; t: typedesc): t {.deprecated: "use fromBencode
   fromBencode(t, newStringStream(source))
 
 proc bDecode*(s: Stream): BencodeObj =
+  result = BencodeObj()
   parseHook(s, result)
 
 proc bDecode*(source: string): BencodeObj =

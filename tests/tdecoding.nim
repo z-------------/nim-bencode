@@ -115,21 +115,27 @@ test "deserialization to (ref) object":
       lang: string
       age: int
       alist: seq[BencodeObj]
+      blist: seq[int]
+      mydict: OrderedTable[string, string]
 
   let expectedRecord = Record(
     name: "dmdm",
     lang: "nim",
     age: 50,
     alist: @[Bencode(1), Bencode("hi")],
+    blist: @[100, 200],
+    mydict: {"foo": "bar"}.toOrderedTable,
   )
 
-  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"
+  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdm5:blistli100ei200ee6:mydictd3:foo3:baree"
   check Record.fromBencode(data) == expectedRecord
   let refRecord = (ref Record).fromBencode(data)
   check refRecord != nil
   check refRecord[] == expectedRecord
   # test the nonsensical overload
+  {.push warning[Deprecated]:off.}
   check data.fromBencode(Record) == expectedRecord
+  {.pop.}
 
 test "various table types":
   const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"
