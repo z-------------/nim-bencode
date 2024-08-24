@@ -1,4 +1,4 @@
-import pkg/bencode/decoding
+import pkg/bencode
 import std/[
   times,
   unittest,

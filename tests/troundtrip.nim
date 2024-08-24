@@ -1,8 +1,5 @@
 import ./utils
-import pkg/bencode/[
-  decoding,
-  encoding,
-]
+import pkg/bencode
 import std/[
   streams,
   tables,

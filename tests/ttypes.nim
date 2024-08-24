@@ -1,4 +1,4 @@
-import pkg/bencode/types
+import pkg/bencode
 import std/[
   tables,
   unittest,

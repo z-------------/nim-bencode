@@ -1,4 +1,4 @@
-import pkg/bencode/encoding
+import pkg/bencode
 import std/[
   json,
   unittest,
