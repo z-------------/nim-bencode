@@ -1,5 +1,6 @@
 import pkg/bencode
-import std/assertions
+when NimMajor >= 2:
+  import std/assertions
 
 let
   data = be({

@@ -1,4 +1,4 @@
-import ./private/utils
+import ./private/macros
 import ./types
 import std/[
   algorithm,

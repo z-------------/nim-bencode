@@ -1,12 +1,15 @@
 import ./types
 import std/[
-  assertions,
   parseutils,
   streams,
   strformat,
-  syncio,
   tables,
 ]
+when NimMajor >= 2:
+  import std/[
+    assertions,
+    syncio,
+  ]
 
 export types
 

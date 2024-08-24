@@ -1,3 +1,4 @@
+import ./private/macros
 import std/[
   enumerate,
   hashes,
@@ -28,11 +29,12 @@ type
     Hexadecimal
     Decimal
 
-const
-  bkStr* {.deprecated: "use Str instead".} = BencodeKind.Str
-  bkInt* {.deprecated: "use Int instead".} = BencodeKind.Int
-  bkList* {.deprecated: "use List instead".} = BencodeKind.List
-  bkDict* {.deprecated: "use Dict instead".} = BencodeKind.Dict
+removeDeprecated:
+  const
+    bkStr* {.deprecated: "use Str instead".} = BencodeKind.Str
+    bkInt* {.deprecated: "use Int instead".} = BencodeKind.Int
+    bkList* {.deprecated: "use List instead".} = BencodeKind.List
+    bkDict* {.deprecated: "use Dict instead".} = BencodeKind.Dict
 
 # $ #
 

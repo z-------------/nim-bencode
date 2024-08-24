@@ -9,4 +9,4 @@ installExt    = @["nim"]
 
 # Dependencies
 
-requires "nim >= 2.0.8"
+requires "nim >= 1.6.20"

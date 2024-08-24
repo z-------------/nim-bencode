@@ -36,3 +36,24 @@ macro sortedFieldPairs*(ty: object; nameIdent, valueIdent, body: untyped) =
     let bodyCopy = body.copy
     replaceIdents(bodyCopy, nameIdent, valueIdent, ty, name)
     result.add bodyCopy
+
+proc removeDeprecatedImpl(body: NimNode) =
+  case body.kind
+  of nnkConstSection:
+    for son in body:
+      son.expectKind nnkConstDef
+      if son[0].kind == nnkPragmaExpr:
+        let pragma = son[0][1]
+        for i in countdown(pragma.len - 1, 0):
+          if pragma[i].kind == nnkExprColonExpr and pragma[i][0].eqIdent("deprecated"):
+            pragma.del(i)
+  else:
+    for son in body:
+      removeDeprecatedImpl(son)
+
+macro removeDeprecated*(body: untyped): untyped =
+  when NimMajor < 2:
+    result = body.copy
+    removeDeprecatedImpl(result)
+  else:
+    result = body
