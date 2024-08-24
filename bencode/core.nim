@@ -56,9 +56,7 @@ proc consume(s: Stream; c: char) =
   if actual != c:
     raise (ref ValueError)(msg: &"expected '{c}', got {actual}")
 
-proc decode(s: Stream): BencodeObj
-
-proc decodeStr(s: Stream): BencodeObj =
+proc parseHook(s: Stream; v: var string) =
   # <length>:<contents>
   # get the length
   var lengthStr = ""
@@ -70,66 +68,71 @@ proc decodeStr(s: Stream): BencodeObj =
     raise (ref ValueError)(msg: &"invalid string length: {length}")
 
   # read the string
-  let str =
+  v =
     if length >= 0:
       s.readStr(length)
     else:
       ""
-  if str.len != length:
-    raise (ref ValueError)(msg: &"string too short: expected {length} characters, got {str.len} characters")
-  BencodeObj(kind: bkStr, s: str)
+  if v.len != length:
+    raise (ref ValueError)(msg: &"string too short: expected {length} characters, got {v.len} characters")
 
-proc decodeInt(s: Stream): BencodeObj =
+proc parseHook(s: Stream; v: var int) =
   # i<ascii>e
   consume(s, 'i')
   var iStr = ""
   while not s.atEnd and s.peekChar() != 'e':
     iStr &= s.readChar()
   consume(s, 'e')
-  BencodeObj(kind: bkInt, i: parseInt(iStr))
+  v = parseInt(iStr)
 
-proc decodeList(s: Stream): BencodeObj =
+proc parseHook[T](s: Stream; v: var seq[T]) =
   # l ... e
-  var l = newSeq[BencodeObj]()
+  v = newSeq[T]()
   consume(s, 'l')
   while not s.atEnd and s.peekChar() != 'e':
-    l.add(decode(s))
+    var item: T
+    parseHook(s, item)
+    v.add(item)
   consume(s, 'e')
-  BencodeObj(kind: bkList, l: l)
 
-proc decodeDict(s: Stream): BencodeObj =
+proc parseHook[T](s: Stream; v: var OrderedTable[string, T]) =
   # d ... e
   var
-    d = initOrderedTable[string, BencodeObj]()
     isReadingKey = true
     curKey = ""
   consume(s, 'd')
   while not s.atEnd and s.peekChar() != 'e':
     if isReadingKey:
-      let keyObj = decode(s)
-      if keyObj.kind != bkStr:
-        raise newException(ValueError, &"invalid dictionary key: expected {bkStr}, got {keyObj.kind}")
-      curKey = keyObj.s
+      parseHook(s, curKey)
       isReadingKey = false
     else:
-      d[curKey] = decode(s)
+      var value: T
+      parseHook(s, value)
+      v[curKey] = value
       isReadingKey = true
   consume(s, 'e')
-  BencodeObj(kind: bkDict, d: d)
 
-proc decode(s: Stream): BencodeObj =
+proc parseHook(s: Stream; v: var BencodeObj) =
   assert not s.atEnd
-  result = case s.peekChar()
-    of 'i': decodeInt(s)
-    of 'l': decodeList(s)
-    of 'd': decodeDict(s)
-    else: decodeStr(s)
+  case s.peekChar()
+    of 'i':
+      v = BencodeObj(kind: bkInt)
+      parseHook(s, v.i)
+    of 'l':
+      v = BencodeObj(kind: bkList)
+      parseHook(s, v.l)
+    of 'd':
+      v = BencodeObj(kind: bkDict)
+      parseHook(s, v.d)
+    else:
+      v = BencodeObj(kind: bkStr)
+      parseHook(s, v.s)
 
 proc bDecode*(s: Stream): BencodeObj =
-  decode(s)
+  parseHook(s, result)
 
 proc bDecode*(source: string): BencodeObj =
-  decode(newStringStream(source))
+  bDecode(newStringStream(source))
 
 proc bDecode*(f: File): BencodeObj =
-  decode(newFileStream(f))
+  bDecode(newFileStream(f))

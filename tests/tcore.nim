@@ -130,4 +130,4 @@ test "catch wrong dictionary key kind":
   let exception =
     expect(ValueError):
       discard bDecode(data)
-  check exception.msg == "invalid dictionary key: expected string, got integer"
+  check exception.msg == "invalid integer: i123e3"
