@@ -28,6 +28,7 @@ type
     Normal
     Hexadecimal
     Decimal
+  BencodeError* = object of ValueError
 
 removeDeprecated:
   const

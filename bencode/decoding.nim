@@ -19,7 +19,7 @@ type
     SyntaxError
     WrongLength
     InvalidValue
-  BencodeDecodeError* = object of ValueError
+  BencodeDecodeError* = object of BencodeError
     kind* {.requiresInit.}: BencodeDecodeErrorKind
     pos* {.requiresInit.}: int
 

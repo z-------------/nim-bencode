@@ -29,8 +29,13 @@ macro sortedFieldPairs*(ty: object; nameIdent, valueIdent, body: untyped) =
   recList.expectKind nnkRecList
   var names = newSeq[NimNode]()
   for son in recList:
-    son.expectKind nnkIdentDefs
-    names.add son[0]
+    case son.kind
+    of nnkIdentDefs:
+      names.add son[0]
+    of nnkRecCase:
+      error("object variants are not supported", son)
+    else:
+      error("unsupported node kind", son)
   names = names.sortedByIt(it.strVal)
   for name in names:
     let bodyCopy = body.copy

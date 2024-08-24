@@ -8,6 +8,9 @@ import std/[
 
 export types
 
+type
+  BencodeEncodeError* = object of BencodeError
+
 proc dumpHook*(s: var string; v: string) =
   s &= $v.len & ':' & v
 
@@ -51,6 +54,28 @@ proc dumpHook*(s: var string; v: BencodeObj) =
   of Dict:
     dumpHook(s, v.d)
 
+import std/json
+
+proc dumpHook*[T: JsonNode](s: var string; v: T) =
+  case v.kind
+  of JString:
+    dumpHook(s, v.getStr)
+  of JInt:
+    dumpHook(s, v.getInt)
+  of JArray:
+    dumpHook(s, v.getElems)
+  of JObject:
+    dumpHook(s, v.getFields)
+  of JNull:
+    raise (ref BencodeEncodeError)(msg: "cannot bencode JSON null")
+  of JFloat:
+    when compiles(dumpHook(s, v.getFloat)):
+      dumpHook(s, v.getFloat)
+    else:
+      raise (ref BencodeEncodeError)(msg: "cannot bencode JSON float")
+  of JBool:
+    dumpHook(s, v.getBool.int)
+
 proc dumpHook*[T: object](s: var string; v: T) =
   s &= 'd'
   sortedFieldPairs(v, name, value):
@@ -67,9 +92,12 @@ proc toBencode*[T](v: T): string =
   ##
   ## .. Note:: The macro that used to be called `toBencode` is now `toBencodeObj`.
   runnableExamples:
+    import std/json
+
     type Record = object
       name: string
       data: BencodeObj
+      json: JsonNode
 
     let record = Record(
       name: "Steve",
@@ -77,8 +105,9 @@ proc toBencode*[T](v: T): string =
         "foo": be"bar",
         "baz": be(1),
       }),
+      json: %*{"hello": "world"},
     )
-    doAssert record.toBencode == "d4:datad3:bazi1e3:foo3:bare4:name5:Stevee"
+    doAssert record.toBencode == "d4:datad3:bazi1e3:foo3:bare4:jsond5:hello5:worlde4:name5:Stevee"
 
   result = ""
   dumpHook(result, v)
