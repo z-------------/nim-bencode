@@ -1,4 +1,4 @@
-import bencodepkg/[core, json]
+import ./bencode/[core, json]
 
 export core, json
 
