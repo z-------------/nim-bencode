@@ -185,4 +185,5 @@ func toBencodeObjImpl(value: NimNode): NimNode =
     newCall(bindSym("Bencode", brOpen), value)
 
 macro toBencodeObj*(value: untyped): BencodeObj =
+  ## .. Note:: Consider instead encoding directly from an object using `toBencode<encoding.html#toBencode,T>`_.
   toBencodeObjImpl(value)

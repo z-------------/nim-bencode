@@ -98,7 +98,7 @@ proc dumpHook*[T: ref object](s: var string; v: T) =
 proc toBencode*[T](v: T): string =
   ## Encode `v` as bencode.
   ##
-  ## .. Note:: The macro that used to be called `toBencode` is now `toBencodeObj`.
+  ## .. Note:: The macro that used to be called `toBencode` is now `toBencodeObj<types.html#toBencodeObj.m,untyped>`_. Consider instead encoding directly from an object as shown below.
   runnableExamples:
     import std/json
 
