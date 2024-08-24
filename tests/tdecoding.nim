@@ -80,3 +80,6 @@ test "catch wrong dictionary key kind":
 test "various input types":
   const expected = ["hello", "world", "!!"]
   checkDecode(array[3, string], "l5:hello5:world2:!!ee", expected)
+
+test "zero-length string":
+  checkDecode(string, "0:", "")

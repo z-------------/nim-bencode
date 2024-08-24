@@ -43,6 +43,7 @@ test "to/from (ref) object":
       blist: seq[int]
       mydict: OrderedTable[string, string]
       myarray: array[2, string]
+      notInBencode: string
 
   let expectedRecord = Record(
     name: "dmdm",
@@ -51,11 +52,12 @@ test "to/from (ref) object":
     alist: @[Bencode(1), Bencode("hi")],
     blist: @[100, 200],
     mydict: {"foo": "bar"}.toOrderedTable,
-    myarray: ["hello", "world"]
+    myarray: ["hello", "world"],
+    notInBencode: "",
   )
 
   # decode
-  const data = "d3:agei50e7:myarrayl5:hello5:worlde5:alistli1e2:hie4:lang3:nim4:name4:dmdm5:blistli100ei200ee6:mydictd3:foo3:baree"
+  const data = "d3:agei50e9:extra keyi123e7:myarrayl5:hello5:worlde5:alistli1e2:hie4:lang3:nim4:name4:dmdm5:blistli100ei200ee6:mydictd3:foo3:baree"
   checkDecode(Record, data, expectedRecord)
   let refRecord = (ref Record).fromBencode(data)
   check refRecord != nil
@@ -65,9 +67,9 @@ test "to/from (ref) object":
   {.pop.}
 
   # encode
-  const dataSorted = "d3:agei50e5:alistli1e2:hie5:blistli100ei200ee4:lang3:nim7:myarrayl5:hello5:worlde6:mydictd3:foo3:bare4:name4:dmdme"
-  check expectedRecord.toBencode == dataSorted
-  check refRecord.toBencode == dataSorted
+  const dataOut = "d3:agei50e5:alistli1e2:hie5:blistli100ei200ee4:lang3:nim7:myarrayl5:hello5:worlde6:mydictd3:foo3:bare4:name4:dmdm12:notInBencode0:e"
+  check expectedRecord.toBencode == dataOut
+  check refRecord.toBencode == dataOut
 
 test "to/from various table types":
   const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"

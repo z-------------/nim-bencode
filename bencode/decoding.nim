@@ -170,9 +170,14 @@ proc parseHook*(s: var InputStream; v: var JsonNode) =
 
 proc parseHook*[T: object](s: var InputStream; v: var T) =
   parseHookDictImpl(s):
-    for name, value in fieldPairs(v):
-      if name == curKey:
-        parseHook(s, value)
+    block outer:
+      for name, value in fieldPairs(v):
+        if name == curKey:
+          parseHook(s, value)
+          break outer
+      # TODO more efficiently skip to next key?
+      var b = BencodeObj()
+      parseHook(s, b)
 
 proc parseHook*[T: ref object](s: var InputStream; v: var T) =
   v = T()
