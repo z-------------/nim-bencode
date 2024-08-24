@@ -97,7 +97,31 @@ proc parseHook*(s: Stream; v: var BencodeObj) =
       v = BencodeObj(kind: bkStr)
       parseHook(s, v.s)
 
-proc parseHook*(s: Stream; v: var object) =
+import std/json
+
+proc parseHook*(s: Stream; v: var JsonNode) =
+  assert not s.atEnd
+  case s.peekChar()
+    of 'i':
+      var value: int
+      parseHook(s, value)
+      v = newJInt(value)
+    of 'l':
+      var value: seq[JsonNode]
+      parseHook(s, value)
+      v = newJArray()
+      v.elems = value
+    of 'd':
+      var value: OrderedTable[string, JsonNode]
+      parseHook(s, value)
+      v = newJObject()
+      v.fields = value
+    else:
+      var value: string
+      parseHook(s, value)
+      v = newJString(value)
+
+proc parseHook*[T: object](s: Stream; v: var T) =
   # d ... e
   # TODO Similar to the parseHook for OrderedTable. Unify or factor them somehow?
   var

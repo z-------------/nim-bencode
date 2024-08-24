@@ -141,3 +141,15 @@ test "various table types":
   }
   check OrderedTable[string, BencodeObj].fromBencode(data) == expectedTablePairs.toOrderedTable
   check Table[string, BencodeObj].fromBencode(data) == expectedTablePairs.toTable
+
+import std/json
+
+test "deserialization to JsonNode":
+  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"
+  let expected = %*{
+    "age": 50,
+    "alist": [1, "hi"],
+    "lang": "nim",
+    "name": "dmdm",
+  }
+  check JsonNode.fromBencode(data) == expected
