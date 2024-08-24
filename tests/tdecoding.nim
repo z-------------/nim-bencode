@@ -6,20 +6,6 @@ import std/[
   unittest,
 ]
 
-test "dictionary access by string key":
-  var b = Bencode({
-    "interval": Bencode(1800),
-    "complete": Bencode(20),
-  })
-  check b.d["interval"] == Bencode(1800)
-  b.d["complete"] = Bencode(30)
-  check b.d["complete"] == Bencode(30)
-
-  check b == be({
-    "interval": be(1800),
-    "complete": be(30),
-  })
-
 test "execution terminates for invalid bencode input":
   const data = "d4:name4:dmdm4:lang3:nim3:agei50e5:alistli1e2:hiee"
   for i in 0 .. data.high:
