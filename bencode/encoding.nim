@@ -63,9 +63,26 @@ proc dumpHook*[T: ref object](s: var string; v: T) =
     dumpHook(s, v[])
 
 proc toBencode*[T](v: T): string =
+  ## Encode `v` as bencode.
+  ##
+  ## .. Note:: The macro that used to be called `toBencode` is now `toBencodeObj`.
+  runnableExamples:
+    type Record = object
+      name: string
+      data: BencodeObj
+
+    let record = Record(
+      name: "Steve",
+      data: be({
+        "foo": be"bar",
+        "baz": be(1),
+      }),
+    )
+    doAssert record.toBencode == "d4:datad3:bazi1e3:foo3:bare4:name5:Stevee"
+
   result = ""
   dumpHook(result, v)
 
 proc bEncode*(obj: BencodeObj): string =
-  result = ""
-  dumpHook(result, obj)
+  ## Same as `obj.toBencode<#toBencode,T>`_.
+  toBencode(obj)

@@ -185,16 +185,20 @@ proc fromBencode(t: typedesc; s: var InputStream): t =
 proc fromBencode*(t: typedesc; source: string): t =
   ## Decode bencoded data from `source` into a value of type `t`.
   runnableExamples:
+    import std/json
+
     type Foo = object
       a: int
       b: string
       c: BencodeObj
+      d: JsonNode
 
-    let data = "d1:b11:hello world1:ai42e1:c16:embedded bencodee"
+    let data = "d1:b11:hello world1:ai42e1:c7:bencode1:dd5:works17:with JsonNode tooee"
     doAssert Foo.fromBencode(data) == Foo(
       a: 42,
       b: "hello world",
-      c: Bencode("embedded bencode"),
+      c: Bencode("bencode"),
+      d: %*{"works": "with JsonNode too"},
     )
 
   var s = toInputStream source
@@ -216,13 +220,13 @@ proc fromBencode*(source: string; t: typedesc): t {.deprecated: "use fromBencode
   fromBencode(t, source)
 
 proc bDecode*(s: Stream): BencodeObj =
-  ## Same as `BencodeObj.fromBencode(s)`.
+  ## Same as `BencodeObj.fromBencode(s)<#fromBencode,typedesc,Stream>`_.
   fromBencode(BencodeObj, s)
 
 proc bDecode*(source: string): BencodeObj =
-  ## Same as `BencodeObj.fromBencode(source)`.
+  ## Same as `BencodeObj.fromBencode(source)<#fromBencode,typedesc,string>`_.
   fromBencode(BencodeObj, source)
 
 proc bDecode*(f: File): BencodeObj =
-  ## Same as `BencodeObj.fromBencode(f)`.
+  ## Same as `BencodeObj.fromBencode(f)<#fromBencode,typedesc,File>`_.
   fromBencode(BencodeObj, f)
