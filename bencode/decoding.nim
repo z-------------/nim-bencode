@@ -97,25 +97,29 @@ proc parseHook*[T; C: static int](s: var InputStream; v: var array[C, T]) =
     inc i
   consume(s, 'e')
 
-type SomeTable[K, V] = Table[K, V] or OrderedTable[K, V]
-
-proc parseHookTableImpl[T](s: var InputStream; v: var SomeTable[string, T]) =
+template parseHookDictImpl(s: var InputStream; body: untyped) =
   # d ... e
   var
     isReadingKey = true
-    curKey = ""
+    curKey {.inject.} = ""
   consume(s, 'd')
   while not s.atEnd and s.peekChar() != 'e':
     if isReadingKey:
       parseHook(s, curKey)
       isReadingKey = false
     else:
-      var value = default T
-      parseHook(s, value)
-      v[curKey] = value
+      body
       isReadingKey = true
   # TODO raise on incomplete pair
   consume(s, 'e')
+
+type SomeTable[K, V] = Table[K, V] or OrderedTable[K, V]
+
+proc parseHookTableImpl[T](s: var InputStream; v: var SomeTable[string, T]) =
+  parseHookDictImpl(s):
+    var value = default T
+    parseHook(s, value)
+    v[curKey] = value
 
 proc parseHook*[T](s: var InputStream; v: var OrderedTable[string, T]) =
   # why is this needed?
@@ -165,22 +169,10 @@ proc parseHook*(s: var InputStream; v: var JsonNode) =
       v = newJString(value)
 
 proc parseHook*[T: object](s: var InputStream; v: var T) =
-  # d ... e
-  # TODO Similar to the parseHook for OrderedTable. Unify or factor them somehow?
-  var
-    isReadingKey = true
-    curKey = ""
-  consume(s, 'd')
-  while not s.atEnd and s.peekChar() != 'e':
-    if isReadingKey:
-      parseHook(s, curKey)
-      isReadingKey = false
-    else:
-      for name, value in fieldPairs(v):
-        if name == curKey:
-          parseHook(s, value)
-      isReadingKey = true
-  consume(s, 'e')
+  parseHookDictImpl(s):
+    for name, value in fieldPairs(v):
+      if name == curKey:
+        parseHook(s, value)
 
 proc parseHook*[T: ref object](s: var InputStream; v: var T) =
   v = T()
