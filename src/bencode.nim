@@ -3,7 +3,7 @@ import bencodepkg/[core, json]
 export core, json
 
 when isMainModule:
-  import os
+  import std/os
 
   proc parseFormatArg(arg: string): BencodeFormat =
     if arg.len < 2: quit("Invalid argument.")
