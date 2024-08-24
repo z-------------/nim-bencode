@@ -147,10 +147,25 @@ proc parseHook*[T: ref object](s: Stream; v: var T) =
   parseHook(s, v[])
 
 proc fromBencode*(t: typedesc; s: Stream): t =
+  ## Decode bencoded data from `s` into a value of type `t`.
   result = default t
   parseHook(s, result)
 
 proc fromBencode*(t: typedesc; source: string): t =
+  ## Decode bencoded data from `source` into a value of type `t`.
+  runnableExamples:
+    type Foo = object
+      a: int
+      b: string
+      c: BencodeObj
+
+    let data = "d1:b11:hello world1:ai42e1:c16:embedded bencodee"
+    doAssert Foo.fromBencode(data) == Foo(
+      a: 42,
+      b: "hello world",
+      c: Bencode("embedded bencode"),
+    )
+
   fromBencode(t, newStringStream(source))
 
 proc fromBencode*(s: Stream; t: typedesc): t {.deprecated: "use fromBencode(typedesc, Stream) instead".} =
@@ -162,11 +177,12 @@ proc fromBencode*(source: string; t: typedesc): t {.deprecated: "use fromBencode
   fromBencode(t, newStringStream(source))
 
 proc bDecode*(s: Stream): BencodeObj =
-  result = BencodeObj()
-  parseHook(s, result)
+  ## Same as `BencodeObj.fromBencode(s)`.
+  fromBencode(BencodeObj, s)
 
 proc bDecode*(source: string): BencodeObj =
-  bDecode(newStringStream(source))
+  ## Same as `BencodeObj.fromBencode(source)`.
+  fromBencode(BencodeObj, source)
 
 proc bDecode*(f: File): BencodeObj =
-  bDecode(newFileStream(f))
+  fromBencode(BencodeObj, newFileStream(f))
