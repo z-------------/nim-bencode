@@ -1,6 +1,10 @@
-import ./bencode/[core, json]
+import ./bencode/[
+  decoding,
+  encoding,
+  json,
+]
 
-export core, json
+export json, decoding, encoding
 
 when isMainModule:
   import std/os

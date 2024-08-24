@@ -4,7 +4,7 @@ import std/[
   sugar,
   tables,
 ]
-import ./core
+import ./types
 
 # to #
 
