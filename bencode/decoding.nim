@@ -1,22 +1,43 @@
 import ./types
 import std/[
   assertions,
+  parseutils,
   streams,
   strformat,
-  strutils,
   syncio,
   tables,
 ]
 
 export types
 
+type
+  BencodeDecodeErrorKind* = enum
+    SyntaxError
+    UnexpectedEndOfInput
+    WrongLength
+    InvalidValue
+  BencodeDecodeError* = object of ValueError
+    kind* {.requiresInit.}: BencodeDecodeErrorKind
+    pos* {.requiresInit.}: int
+
+proc newBencodeDecodeError(pos: int; kind: BencodeDecodeErrorKind; msg: string): ref BencodeDecodeError =
+  (ref BencodeDecodeError)(msg: msg, kind: kind, pos: pos)
+
+proc newBencodeDecodeError(s: Stream; kind: BencodeDecodeErrorKind; msg: string): ref BencodeDecodeError =
+  newBencodeDecodeError(s.getPosition, kind, msg)
+
 proc consume(s: Stream; c: char) =
   ## Check that the char at the current position is `c`, then consume it.
   if s.atEnd:
-    raise (ref ValueError)(msg: &"expected '{c}', got end of input")
+    raise newBencodeDecodeError(s, UnexpectedEndOfInput, &"expected '{c}', got end of input")
   let actual = s.readChar()
   if actual != c:
-    raise (ref ValueError)(msg: &"expected '{c}', got {actual}")
+    raise newBencodeDecodeError(s, SyntaxError, &"expected '{c}', got {actual}")
+
+proc parseInt(str: string; pos: int): int =
+  result = 0 # parseutils.parseInt's second parameter really should be marked `out`
+  if parseutils.parseInt(str, result) != str.len:
+    raise newBencodeDecodeError(pos, SyntaxError, &"invalid integer: {str}")
 
 proc parseHook*(s: Stream; v: var string) =
   # <length>:<contents>
@@ -25,9 +46,9 @@ proc parseHook*(s: Stream; v: var string) =
   while not s.atEnd and s.peekChar() != ':':
     lengthStr &= s.readChar()
   consume(s, ':')
-  let length = parseInt(lengthStr)
+  let length = parseInt(lengthStr, s.getPosition)
   if length < 0:
-    raise (ref ValueError)(msg: &"invalid string length: {length}")
+    raise newBencodeDecodeError(s, InvalidValue, &"invalid string length: {length}")
 
   # read the string
   v =
@@ -36,7 +57,7 @@ proc parseHook*(s: Stream; v: var string) =
     else:
       ""
   if v.len != length:
-    raise (ref ValueError)(msg: &"string too short: expected {length} characters, got {v.len} characters")
+    raise newBencodeDecodeError(s, WrongLength, &"string too short: expected {length} characters, got {v.len} characters")
 
 proc parseHook*(s: Stream; v: var int) =
   # i<ascii>e
@@ -45,7 +66,7 @@ proc parseHook*(s: Stream; v: var int) =
   while not s.atEnd and s.peekChar() != 'e':
     iStr &= s.readChar()
   consume(s, 'e')
-  v = parseInt(iStr)
+  v = parseInt(iStr, s.getPosition)
 
 proc parseHook*[T](s: Stream; v: var seq[T]) =
   # l ... e
@@ -64,7 +85,7 @@ proc parseHook*[T; C: static int](s: Stream; v: var array[C, T]) =
   var i = 0
   while not s.atEnd and s.peekChar() != 'e':
     if i >= C:
-      raise (ref ValueError)(msg: &"list too long: expected {C} items, got at least {i + 1} items")
+      raise newBencodeDecodeError(s, WrongLength, &"list too long: expected {C} items, got at least {i + 1} items")
     var item = default T
     parseHook(s, item)
     v[i] = item

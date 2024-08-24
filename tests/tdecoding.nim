@@ -15,47 +15,57 @@ test "execution terminates for invalid bencode input":
     let invalidData = data[0 .. i - 1] & data[i + 1 .. ^1]
     try:
       discard bDecode(invalidData)
-    except ValueError:
+    except BencodeDecodeError:
       discard
 
 test "string too short":
   let exception =
-    expect ValueError:
+    expect BencodeDecodeError:
       discard bDecode("10:hello")
+  check exception.kind == WrongLength
   check "string too short" in exception.msg
 
 test "invalid string length":
   let exception =
-    expect ValueError:
+    expect BencodeDecodeError:
       discard bDecode("-5:hello")
+  check exception.kind == InvalidValue
   check "invalid string length" in exception.msg
 
 test "unexpected end of input":
   const ExpectedMsg = "expected 'e'"
 
-  var exception: ref ValueError
+  var exception: ref BencodeDecodeError
   exception =
-    expect ValueError:
+    expect BencodeDecodeError:
       discard bDecode("l")
+  check exception.kind == UnexpectedEndOfInput
   check ExpectedMsg in exception.msg
+
   exception =
-    expect ValueError:
+    expect BencodeDecodeError:
       discard bDecode("d")
+  check exception.kind == UnexpectedEndOfInput
   check ExpectedMsg in exception.msg
+
   exception =
-    expect ValueError:
+    expect BencodeDecodeError:
       discard bDecode("d5:hello5:world3:foo")
+  check exception.kind == UnexpectedEndOfInput
   check ExpectedMsg in exception.msg
+
   exception =
-    expect ValueError:
+    expect BencodeDecodeError:
       echo bDecode("5")
+  check exception.kind == UnexpectedEndOfInput
   check "expected ':'" in exception.msg
 
 test "catch wrong dictionary key kind":
   const data = "d4:name4:dmdmi123e3:nim3:agei50e5:alistli1e2:hiee"
   let exception =
-    expect(ValueError):
+    expect BencodeDecodeError:
       discard bDecode(data)
+  check exception.kind == SyntaxError
   check exception.msg == "invalid integer: i123e3"
 
 test "deserialization to (ref) object":
@@ -114,6 +124,7 @@ test "deserialization to JsonNode":
 
 test "list too long for array":
   let exception =
-    expect ValueError:
+    expect BencodeDecodeError:
       discard array[2, string].fromBencode("l5:hello5:world2:!!ee")
+  check exception.kind == WrongLength
   check exception.msg == "list too long: expected 2 items, got at least 3 items"
