@@ -108,7 +108,7 @@ test "catch wrong dictionary key kind":
       discard bDecode(data)
   check exception.msg == "invalid integer: i123e3"
 
-test "deserialization to object":
+test "deserialization to (ref) object":
   type
     Record = object
       name: string
@@ -116,15 +116,20 @@ test "deserialization to object":
       age: int
       alist: seq[BencodeObj]
 
-  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"
-  let record = Record.fromBencode(data)
-  check record == Record(
+  let expectedRecord = Record(
     name: "dmdm",
     lang: "nim",
     age: 50,
     alist: @[Bencode(1), Bencode("hi")],
   )
-  check record == data.fromBencode(Record)
+
+  const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"
+  check Record.fromBencode(data) == expectedRecord
+  let refRecord = (ref Record).fromBencode(data)
+  check refRecord != nil
+  check refRecord[] == expectedRecord
+  # test the nonsensical overload
+  check data.fromBencode(Record) == expectedRecord
 
 test "various table types":
   const data = "d3:agei50e5:alistli1e2:hie4:lang3:nim4:name4:dmdme"

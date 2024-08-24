@@ -115,6 +115,10 @@ proc parseHook*(s: Stream; v: var object) =
       isReadingKey = true
   consume(s, 'e')
 
+proc parseHook*[T: ref object](s: Stream; v: var T) =
+  v = T()
+  parseHook(s, v[])
+
 proc fromBencode*(t: typedesc; s: Stream): t =
   parseHook(s, result)
 
