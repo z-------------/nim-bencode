@@ -1,4 +1,5 @@
 import pkg/bencode
+import pkg/bencode/json
 import std/[
   json,
   unittest,
