@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+  pull_request:
   workflow_dispatch:
 jobs:
   test:
@@ -20,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - uses: jiro4989/setup-nim-action@v1
+      - uses: jiro4989/setup-nim-action@v2
         with:
           nim-version: ${{ matrix.nimVersion }}
       - run: nimble test -Y --mm:${{ matrix.nimMm }}
