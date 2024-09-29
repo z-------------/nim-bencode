@@ -3,30 +3,17 @@ import std/[
   macros,
 ]
 
-proc replaceIdents(body, nameIdent, valueIdent, ty, name: NimNode) =
-  nameIdent.expectKind nnkIdent
-  valueIdent.expectKind nnkIdent
-  ty.expectKind nnkSym
-  name.expectKind {nnkSym, nnkIdent}
-
-  for i in 0 ..< body.len:
-    case body[i].kind
-    of nnkIdent:
-      if body[i].eqIdent(nameIdent):
-        body[i] = newLit(name.strVal)
-      elif body[i].eqIdent(valueIdent):
-        body[i] = newDotExpr(ty, name)
-    else:
-      replaceIdents(body[i], nameIdent, valueIdent, ty, name)
-
-macro sortedFieldPairs*(ty: object; nameIdent, valueIdent, body: untyped) =
+macro sortedFieldPairsImpl(ty: object; nameIdent, valueIdent, body: untyped) =
+  body.expectKind nnkStmtList
   if nameIdent.eqIdent(valueIdent):
     error("names must be different", valueIdent)
+
   result = newStmtList()
   let objectTy = ty.getTypeImpl
   objectTy.expectKind nnkObjectTy
   let recList = objectTy[2]
   recList.expectKind nnkRecList
+
   var names = newSeq[NimNode]()
   for son in recList:
     case son.kind
@@ -37,10 +24,27 @@ macro sortedFieldPairs*(ty: object; nameIdent, valueIdent, body: untyped) =
     else:
       error("unsupported node kind", son)
   names = names.sortedByIt(it.strVal)
+
   for name in names:
-    let bodyCopy = body.copy
-    replaceIdents(bodyCopy, nameIdent, valueIdent, ty, name)
-    result.add bodyCopy
+    let newBody = newStmtList(
+      newProc(nameIdent, [bindSym"untyped"], newLit(name.strVal), nnkTemplateDef, nnkPragma.newTree(ident"used")),
+      newProc(valueIdent, [bindSym"untyped"], newDotExpr(ty, name), nnkTemplateDef, nnkPragma.newTree(ident"used")),
+    )
+    for node in body:
+      newBody.add node
+    result.add newBlockStmt(newBody)
+
+macro sortedFieldPairs*(loop: ForLoopStmt) =
+  if loop.len != 4:
+    error("wrong number of arguments")
+  let
+    nameIdent = loop[0]
+    valueIdent = loop[1]
+    call = loop[2]
+    body = loop[3]
+  call.expectKind nnkCall
+  let tyIdent = call[1]
+  result = newCall(bindSym"sortedFieldPairsImpl", tyIdent, nameIdent, valueIdent, body)
 
 proc removeDeprecatedImpl(body: NimNode) =
   case body.kind
@@ -62,3 +66,11 @@ macro removeDeprecated*(body: untyped): untyped =
     removeDeprecatedImpl(result)
   else:
     result = body
+
+import ../types
+
+template effectiveName*(fieldName, fieldValue: untyped): untyped =
+  when fieldValue.hasCustomPragma(types.name):
+    fieldValue.getCustomPragmaVal(types.name)
+  else:
+    fieldName

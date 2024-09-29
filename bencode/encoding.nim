@@ -86,8 +86,8 @@ proc dumpHook*[T: JsonNode](s: var string; v: T) =
 
 proc dumpHook*[T: object](s: var string; v: T) =
   s &= 'd'
-  sortedFieldPairs(v, name, value):
-    maybeDumpDictPair(s, name, value)
+  for fieldName, fieldValue in sortedFieldPairs(v):
+    maybeDumpDictPair(s, effectiveName(fieldName, fieldValue), fieldValue)
   s &= 'e'
 
 proc dumpHook*[T: ref object](s: var string; v: T) =

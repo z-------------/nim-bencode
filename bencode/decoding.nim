@@ -1,3 +1,4 @@
+import ./private/macros
 import ./[
   inputstreams,
   types,
@@ -174,9 +175,9 @@ proc parseHook*(s: var InputStream; v: var JsonNode) =
 proc parseHook*[T: object](s: var InputStream; v: var T) =
   parseHookDictImpl(s):
     block outer:
-      for name, value in fieldPairs(v):
-        if name == curKey:
-          parseHook(s, value)
+      for fieldName, fieldValue in fieldPairs(v):
+        if effectiveName(fieldName, fieldValue) == curKey:
+          parseHook(s, fieldValue)
           break outer
       # TODO more efficiently skip to next key?
       var b = BencodeObj()

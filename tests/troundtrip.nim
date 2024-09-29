@@ -34,7 +34,7 @@ test "to/from (ref) object":
   type
     Record = object
       name: string
-      lang: string
+      lang {.name: "the language".}: string
       age: int
       alist: seq[BencodeObj]
       blist: seq[int]
@@ -54,7 +54,7 @@ test "to/from (ref) object":
   )
 
   # decode
-  const data = "d3:agei50e9:extra keyi123e7:myarrayl5:hello5:worlde5:alistli1e2:hie4:lang3:nim4:name4:dmdm5:blistli100ei200ee6:mydictd3:foo3:baree"
+  const data = "d3:agei50e9:extra keyi123e7:myarrayl5:hello5:worlde5:alistli1e2:hie12:the language3:nim4:name4:dmdm5:blistli100ei200ee6:mydictd3:foo3:baree"
   checkDecode(Record, data, expectedRecord)
   let refRecord = (ref Record).fromBencode(data)
   check refRecord != nil
@@ -64,7 +64,7 @@ test "to/from (ref) object":
   {.pop.}
 
   # encode
-  const dataOut = "d3:agei50e5:alistli1e2:hie5:blistli100ei200ee4:lang3:nim7:myarrayl5:hello5:worlde6:mydictd3:foo3:bare4:name4:dmdm12:notInBencode0:e"
+  const dataOut = "d3:agei50e5:alistli1e2:hie5:blistli100ei200ee12:the language3:nim7:myarrayl5:hello5:worlde6:mydictd3:foo3:bare4:name4:dmdm12:notInBencode0:e"
   check expectedRecord.toBencode == dataOut
   check refRecord.toBencode == dataOut
 

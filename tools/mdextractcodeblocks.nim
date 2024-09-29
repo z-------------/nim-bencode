@@ -22,5 +22,6 @@ for line in lines(filename):
   else:
     if line.strip == "```":
       f.close
+      f = nil
     else:
       f.writeLine(line)

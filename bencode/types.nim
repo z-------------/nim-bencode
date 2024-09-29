@@ -8,6 +8,8 @@ import std/[
   tables,
 ]
 
+template name*(name: string) {.pragma.}
+
 type
   BencodeKind* = enum
     Str = "string"
